@@ -10,7 +10,7 @@ from tkinter import Tk    # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
 from numpy import minimum,fft,pad
 from scipy.signal import windows
-from os import path
+from os import path, makedirs
 
 def snip(z,m):
     x = z.copy()
@@ -67,6 +67,7 @@ class XRD_Peak_search_window:
             channels += [float(ch)]
 
         self.spectrum_filename = filename
+        self.output_dir = './data/'
         self.spectrum = np.array(spectrum)
         self.channels = np.array(channels)
         self.width_list = np.linspace(self.width_default, 50, 10)
@@ -220,16 +221,21 @@ class XRD_Peak_search_window:
             update_plot()
 
         def save_peak(event):
+            base, outputfile = path.split(self.spectrum_filename)
+            outputfile, frmt = outputfile.split('.')
+            outputfile = self.output_dir + outputfile
             # savefig
             extent = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
-            self.fig.savefig(self.spectrum_filename+'.png', bbox_inches=extent.expanded(1.1, 1.2))
+            self.fig.savefig(outputfile+'.png', bbox_inches=extent.expanded(1.1, 1.2))
             self.net_spectrum = self.normalize(self.net_spectrum)
-
             # save peaks: in each row of a file write position and intensity of a peak
-            with open(self.spectrum_filename+'.txt', 'w') as outfile:
+            with open(outputfile+'.txt', 'w') as outfile:
                 for i, channel in enumerate(self.peaks):
                     outfile.write(str(self.channels[channel]) + ' ' + format(self.net_spectrum[channel], '.2f') +'\n')
-        
+            with open(outputfile+'_netSpectrum.txt', 'w') as netoutfile:
+                for c, channel in enumerate(self.channels):
+                    netoutfile.write(str(channel) + ' ' + format(self.net_spectrum[c], '.2f') +'\n')
+                    
         def update(event):
             update_plot()
 
@@ -241,9 +247,9 @@ class XRD_Peak_search_window:
             peak2remove = peak_energy_pos[peak_energy_pos>=xmin]
             peak2remove = peak2remove[peak2remove<=xmax]
 
-            print('PEAK2REMOVE',np.where(peak_energy_pos==peak2remove))
             for p in np.where(peak_energy_pos==peak2remove):
                 self.peaks = np.delete(self.peaks, p)
+                print('removed_peak:',np.where(peak_energy_pos==peak2remove))
             
             update_plot()
 
@@ -299,44 +305,8 @@ class XRD_Peak_search_window:
         plt.show()
 
 if __name__=='__main__':
+    if not path.isdir('./data/'): makedirs('./data/')
     xrdwin = XRD_Peak_search_window()
 
     xrdwin.ax.legend(frameon=True)
     xrdwin.execute()
-    
-    """ def update(val):
-        if type(val)==float or type(val)==int:
-            xrdwin.ax.clear()
-            xrdwin.ax.set_title(xrdwin.spectrum_filename)
-            p = []
-
-            # xrdwin.set_spectrum(xrdwin.spectrum_filename)
-            # xrdwin.set_background()
-            
-            xrdwin.normalize(xrdwin.net_spectrum)
-            xrdwin.background = snip(convolve(xrdwin.spectrum, n=35, std=3), m=xrdwin.m_slider.val)
-            xrdwin.background = xrdwin.background + xrdwin.bgheight_slider.val
-            xrdwin.net_spectrum = xrdwin.spectrum - xrdwin.background
-            xrdwin.net_spectrum[xrdwin.net_spectrum<0] = 0
-            xrdwin.net_spectrum = np.convolve(xrdwin.net_spectrum, xrdwin.mask, 'same')
-            xrdwin.max_val= np.max(xrdwin.spectrum)
-            xrdwin.net_spectrum = xrdwin.normalize(xrdwin.net_spectrum)
-
-            xrdwin.ax.plot(xrdwin.channels, xrdwin.spectrum, label='raw', marker='.', lw=2)
-            xrdwin.ax.plot(xrdwin.channels, xrdwin.background, label='background', lw=2)
-            xrdwin.ax.plot(xrdwin.channels, xrdwin.net_spectrum, label='net spectrum', marker='.', lw=2)
-
-            xrdwin.ax.set_xlabel('angles')
-            xrdwin.ax.set_ylabel('intensity')
-
-            xrdwin.ax.set_xlim(xrdwin.channels[0],xrdwin.channels[-1])
-            xrdwin.width_list = np.arange(xrdwin.width_slider_min.val, xrdwin.width_slider_max.val, 0.1)
-            for width in xrdwin.width_list:
-                peaks = sci_sig.find_peaks(np.log(xrdwin.net_spectrum), width=width, height=2)
-                p += list(peaks[0])
-
-            xrdwin.peaks = list(dict.fromkeys(p))
-            xrdwin.ax.vlines(xrdwin.channels[xrdwin.peaks], 0, xrdwin.max_val, 'r', label='peak position')
-            xrdwin.ax.legend(frameon=True)
-            xrdwin.fig.canvas.draw_idle() """
-    
