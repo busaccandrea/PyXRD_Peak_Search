@@ -45,10 +45,10 @@ class XRD_Peak_search_window:
         self.init_spectrum()
         self.init_widgets()
 
-        self.ax.plot(self.channels, self.spectrum, label='spectrum')
+        self.ax.plot(self.channels, self.spectrum, label='spectrum', marker='.')
         self.ax.plot(self.channels, self.background, label='background')
-        self.ax.plot(self.channels, self.net_spectrum, label='net spectrum')
-        self.vlines = self.ax.vlines(self.channels[self.peaks[0]], 0, self.max_val, 'r', label='peak position')
+        self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.')
+        self.vlines = self.ax.vlines(self.channels[self.peaks[0]], 0, 1000, 'r', label='peak position')#self.channels[self.peaks[0]], 0, self.max_val, 'r', label='peak position')
 
     def init_spectrum(self):
         filename = self.open_new_file()
@@ -70,13 +70,13 @@ class XRD_Peak_search_window:
         self.spectrum = self.normalize(self.spectrum)
         self.max_val = np.max(self.spectrum)
         
-        filter_size = 20
-        self.mask=np.ones((1,filter_size))/filter_size
-        self.mask=self.mask[0,:]
         self.background = snip(convolve(self.spectrum, n=35, std=3), m=16)
         self.net_spectrum = self.spectrum - self.background
         self.net_spectrum[self.net_spectrum<0]=0
-        self.net_spectrum = np.convolve(self.net_spectrum, self.mask, 'same')
+
+        self.smoothing_std_default = 3
+        self.smoothing_std = self.smoothing_std_default
+        self.net_spectrum = convolve(self.net_spectrum, n=35, std=3)
 
         self.net_spectrum = self.normalize(self.net_spectrum)
 
@@ -92,28 +92,27 @@ class XRD_Peak_search_window:
         return filename
 
     def init_widgets(self):
-        self.axwidth_min = plt.axes([0.25, 0.1, 0.65, 0.03])
+        self.axwidth_min = plt.axes([0.25, 0.20, 0.215, 0.03])
         self.width_slider_min = Slider(
             ax=self. axwidth_min,
             label='width min',
             valmin=0,
-            valmax=50,
+            valmax=30,
             valstep = 0.1,
             valinit=10
         )
 
-        """ self.axwidth_max = plt.axes([0.25, 0.15, 0.65, 0.03])
-        self.width_slider_max = Slider(
-            ax=self.axwidth_max,
-            label='width max',
+        self.axsmoothing = plt.axes([0.25, 0.1, 0.215, 0.03])
+        self.slider_smoothing = Slider(
+            ax=self.axsmoothing,
+            label='smoothing',
             valmin=0,
-            valmax=50,
-            valstep = 0.1,
-            valinit=50
+            valmax=10,
+            valstep = 0.5,
+            valinit=self.smoothing_std
         )
- """
-  
-        self.axbgheight = plt.axes([0.25, 0.20, 0.215, 0.03])
+
+        self.axbgheight = plt.axes([0.25, 0.15, 0.65, 0.03])
         self.bgheight_slider = Slider(
         ax=self.axbgheight,
         label='background height',
@@ -162,12 +161,13 @@ class XRD_Peak_search_window:
         self.net_spectrum = self.spectrum - self.background
         
         self.net_spectrum[self.net_spectrum<0] = 0
-        self.net_spectrum = np.convolve(self.net_spectrum, self.mask, 'same')
+        if self.smoothing_std!=0:    
+            self.net_spectrum = convolve(self.net_spectrum, n=35, std=self.smoothing_std)
         self.max_val= np.max(self.net_spectrum)
         self.net_spectrum = self.normalize(self.net_spectrum)
 
     def set_peaks(self):
-        sci_sig.find_peaks(np.log(self.net_spectrum), width=self.width_default, height=1)
+        sci_sig.find_peaks(np.log(self.net_spectrum), width=self.width_default, height=2)
 
     def update_peaks(self):
         p = []
@@ -220,6 +220,7 @@ class XRD_Peak_search_window:
             base, outputfile = path.split(self.spectrum_filename)
             outputfile, frmt = outputfile.split('.')
             outputfile = self.output_dir + outputfile
+
             # savefig
             extent = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
             self.fig.savefig(outputfile+'.png', bbox_inches=extent.expanded(1.1, 1.2))
@@ -265,6 +266,13 @@ class XRD_Peak_search_window:
             self.peaks = np.array(list(self.peaks)+list(indmax[0]))
             update_plot()
 
+        def smoothing_changed(val):
+            self.smoothing_std = self.slider_smoothing.val
+            self.set_background()
+            self.update_peaks()
+            update_plot()
+
+
         self.span_remove = SpanSelector(
             self.ax,
             onselect=onselect_remove,
@@ -287,7 +295,7 @@ class XRD_Peak_search_window:
 
         # onchange
         self.width_slider_min.on_changed(width_slider_changed)
-        # self.width_slider_max.on_changed(width_slider_changed)
+        self.slider_smoothing.on_changed(smoothing_changed)
         self.m_slider.on_changed(update_background)
         self.bgheight_slider.on_changed(update_background)
 
