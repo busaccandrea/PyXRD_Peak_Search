@@ -91,7 +91,7 @@ class XRD_Peak_search_window:
 
     def open_new_file(self):
         Tk().withdraw()
-        filename = askopenfilename(filetypes=(('dat files', '*.dat'),('All files', '*.*')))
+        filename = askopenfilename(filetypes=(('dat files', '*.dat'),('All files', '*.*')), initialdir='./')
         return filename
 
     def init_widgets(self):
