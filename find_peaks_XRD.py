@@ -1,10 +1,6 @@
-from turtle import color
-from click import open_file
-from matplotlib.cbook import index_of
 import scipy.signal as sci_sig
 from matplotlib import pyplot as plt
 import numpy as np
-from glob import glob
 from matplotlib.widgets import Slider, Button, SpanSelector
 from tkinter import Tk    # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
