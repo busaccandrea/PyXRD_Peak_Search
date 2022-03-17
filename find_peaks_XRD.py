@@ -182,6 +182,9 @@ class XRD_Peak_search_window:
 
     def execute(self):
         def update_plot():
+            xlim = self.ax.get_xlim()
+            ylim = self.ax.get_ylim()
+
             self.ax.clear()
             self.ax.set_title(path.basename(self.spectrum_filename))
 
@@ -191,7 +194,8 @@ class XRD_Peak_search_window:
 
             self.ax.vlines(self.channels[self.peaks], 0, 1000, 'r', label='peak position')
             self.ax.legend(frameon=True)
-            self.ax.set_xlim(self.channels[0],self.channels[-1])
+            self.ax.set_xlim(xlim)
+            self.ax.set_ylim(ylim)
             self.fig.canvas.draw_idle()
         
         def update_background(val):
