@@ -241,16 +241,30 @@ class XRD_Peak_search_window:
             update_plot()
 
         def onselect_remove(xmin, xmax):
+            
+            def theta_to_channels(theta):
+                positions = []
+                for t in theta:
+                    positions += [np.where(self.channels == t)[0][0]]
+                return positions
+
+            print('AVAILABLE peaks:', self.peaks)
             # take all peaks between min and max and remove them
             self.peaks = np.array(self.peaks)
             peak_energy_pos = self.channels[self.peaks]
-            print('PEAKS',self.channels[self.peaks], xmax)
-            peak2remove = peak_energy_pos[peak_energy_pos>=xmin]
-            peak2remove = peak2remove[peak2remove<=xmax]
 
-            for p in np.where(peak_energy_pos==peak2remove):
-                self.peaks = np.delete(self.peaks, p)
-                print('removed_peak:',np.where(peak_energy_pos==peak2remove))
+            peaks2remove = peak_energy_pos[peak_energy_pos>=xmin]
+            peaks2remove = peaks2remove[peaks2remove<=xmax]
+
+
+            peakpos = theta_to_channels(peaks2remove)
+            print('SELECTED peak/s (theta):', peaks2remove)
+            print('SELECTED peak/s (index):', peakpos)
+            for p in peakpos:
+                idx = np.where(self.peaks == p)[0][0]
+                self.peaks = np.delete(self.peaks, idx)
+            
+            print('REMAINING peaks:', self.peaks)
             
             update_plot()
 
@@ -267,7 +281,8 @@ class XRD_Peak_search_window:
                     tmpmax=self.net_spectrum[ind]
                     indmax=ind
 
-            self.peaks = np.array(list(self.peaks)+list(indmax[0]))
+            self.peaks = np.sort(np.array(list(self.peaks)+list(indmax[0])))
+            print(self.peaks)
             update_plot()
 
         def smoothing_changed(val):
