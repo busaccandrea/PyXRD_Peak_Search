@@ -49,6 +49,7 @@ class XRD_Peak_search_window:
         self.ax.plot(self.channels, self.background, label='background')
         self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.')
         self.vlines = self.ax.vlines(self.channels[self.peaks[0]], 0, 1000, 'r', label='peak position')#self.channels[self.peaks[0]], 0, self.max_val, 'r', label='peak position')
+        self.update_plot()
 
     def init_spectrum(self):
         filename = self.open_new_file()
@@ -81,7 +82,7 @@ class XRD_Peak_search_window:
         self.net_spectrum = self.normalize(self.net_spectrum)
 
         # find peaks with default settings.
-        self.peaks = sci_sig.find_peaks(np.log(self.net_spectrum), width=0.2, height=1)
+        self.peaks = sci_sig.find_peaks(np.log(self.net_spectrum), width=10, height=2)[0]
 
         # once channels is initialized we can set lims on x axis
         self.ax.set_xlim(self.channels[0],self.channels[-1])
@@ -180,8 +181,7 @@ class XRD_Peak_search_window:
         arr = 1000 * arr / np.max(arr)
         return arr
 
-    def execute(self):
-        def update_plot():
+    def update_plot(self):
             xlim = self.ax.get_xlim()
             ylim = self.ax.get_ylim()
 
@@ -197,12 +197,14 @@ class XRD_Peak_search_window:
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
             self.fig.canvas.draw_idle()
+
+    def execute(self):
         
         def update_background(val):
             self.set_background()
             self.update_peaks()
 
-            update_plot()
+            self.update_plot()
 
         def width_slider_changed(val):
             # I have to update the widthlist
@@ -210,7 +212,7 @@ class XRD_Peak_search_window:
             self.width_list = np.arange(self.width_slider_min.val, 50, 0.1)
             # I have to update peaks
             self.update_peaks()
-            update_plot()
+            self.update_plot()
 
         def open_file(event):
             Tk().withdraw()
@@ -218,7 +220,7 @@ class XRD_Peak_search_window:
             self.set_spectrum(filename)
             self.set_background()
             self.update_peaks()
-            update_plot()
+            self.update_plot()
 
         def save_peak(event):
             base, outputfile = path.split(self.spectrum_filename)
@@ -238,7 +240,7 @@ class XRD_Peak_search_window:
                     netoutfile.write(str(channel) + ' ' + format(self.net_spectrum[c], '.2f') +'\n')
                     
         def update(event):
-            update_plot()
+            self.update_plot()
 
         def onselect_remove(xmin, xmax):
             
@@ -266,7 +268,7 @@ class XRD_Peak_search_window:
             
             print('REMAINING peaks:', self.peaks)
             
-            update_plot()
+            self.update_plot()
 
         def onselect_add(xmin, xmax):
             # take the position where the max is and put a peak
@@ -283,13 +285,13 @@ class XRD_Peak_search_window:
 
             self.peaks = np.sort(np.array(list(self.peaks)+list(indmax[0])))
             print(self.peaks)
-            update_plot()
+            self.update_plot()
 
         def smoothing_changed(val):
             self.smoothing_std = self.slider_smoothing.val
             self.set_background()
             self.update_peaks()
-            update_plot()
+            self.update_plot()
 
 
         self.span_remove = SpanSelector(
