@@ -1,7 +1,7 @@
 import scipy.signal as sci_sig
 from matplotlib import pyplot as plt
 import numpy as np
-from matplotlib.widgets import Slider, Button, SpanSelector
+from matplotlib.widgets import Slider, Button, SpanSelector, CheckButtons
 from tkinter import Tk    # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
 from numpy import minimum,fft,pad
@@ -43,12 +43,12 @@ class XRD_Peak_search_window:
         plt.subplots_adjust(left=0.25, bottom=0.35)
         
         self.init_spectrum()
-        self.init_widgets()
 
-        self.ax.plot(self.channels, self.spectrum, label='spectrum', marker='.')
-        self.ax.plot(self.channels, self.background, label='background')
-        self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.')
+        self.linespec, = self.ax.plot(self.channels, self.spectrum, label='spectrum', marker='.')
+        self.linebg,   = self.ax.plot(self.channels, self.background, label='background')
+        self.linenet,  = self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.')
         self.vlines = self.ax.vlines(self.channels[self.peaks[0]], 0, 1000, 'r', label='peak position')#self.channels[self.peaks[0]], 0, self.max_val, 'r', label='peak position')
+        self.init_widgets()
         self.update_plot()
 
     def init_spectrum(self):
@@ -93,6 +93,7 @@ class XRD_Peak_search_window:
         return filename
 
     def init_widgets(self):
+        # SLIDERS
         self.axwidth_min = plt.axes([0.25, 0.20, 0.215, 0.03])
         self.width_slider_min = Slider(
             ax=self. axwidth_min,
@@ -131,16 +132,26 @@ class XRD_Peak_search_window:
         valmax=50,
         valstep = 1,
         valinit=16
-    )
+        )
 
-        self.openfileax = plt.axes([0.001, 0.90, 0.16, 0.04])
+        # BUTTONS
+        self.openfileax = plt.axes([0.16, 0.855, 0.06, 0.04])
         self.openfilebutton = Button(self.openfileax, 'Open file', hovercolor='0.975')
 
-        self.updateax = plt.axes([0.001, 0.855, 0.16, 0.04])
-        self.updatebutton = Button(self.updateax, 'update plot', hovercolor='0.975')
+        self.updateax = plt.axes([0.16, 0.805, 0.06, 0.04])
+        self.updatebutton = Button(self.updateax, 'Update plot', hovercolor='0.975')
+
+        self.restore_default_view_ax = plt.axes([0.16, 0.755, 0.06, 0.04])
+        self.restore_default_view_button = Button(self.restore_default_view_ax, 'Restore view', hovercolor='0.975')
         
-        self.saveax = plt.axes([0.8, 0.025, 0.16, 0.04])
+        self.saveax = plt.axes([0.8, 0.025, 0.04, 0.04])
         self.savebutton = Button(self.saveax, 'Save peaks', hovercolor='0.975')
+
+        # CHECKBOXES
+        self.update_lines()
+
+        self.checkax = plt.axes([0.80, 0.655, 0.1, 0.08])
+        self.check = CheckButtons(self.checkax, self.labels, self.visibility)
     
     def set_spectrum(self, filename):
         self.spectrum_filename = filename
@@ -181,6 +192,11 @@ class XRD_Peak_search_window:
         arr = 1000 * arr / np.max(arr)
         return arr
 
+    def update_lines(self):
+        self.lines = [self.linespec, self.linebg, self.linenet]
+        self.labels = [str(line.get_label()) for line in self.lines]
+        self.visibility = [line.get_visible() for line in self.lines]
+
     def update_plot(self):
             xlim = self.ax.get_xlim()
             ylim = self.ax.get_ylim()
@@ -188,10 +204,14 @@ class XRD_Peak_search_window:
             self.ax.clear()
             self.ax.set_title(path.basename(self.spectrum_filename))
 
-            self.ax.plot(self.channels, self.spectrum, label='raw', marker='.', lw=2)
-            self.ax.plot(self.channels, self.background, label='background', lw=2)
-            self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.', lw=2)
+            self.linespec, = self.ax.plot(self.channels, self.spectrum, label='spectrum', marker='.', lw=2)
+            self.linebg, = self.ax.plot(self.channels, self.background, label='background', lw=2)
+            self.linenet, = self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.', lw=2)
 
+            self.linespec.set_visible(self.visibility[0])
+            self.linebg.set_visible(self.visibility[1])
+            self.linenet.set_visible(self.visibility[2])
+            
             self.ax.vlines(self.channels[self.peaks], 0, 1000, 'r', label='peak position')
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
@@ -314,6 +334,14 @@ class XRD_Peak_search_window:
             button=3
         )
 
+        def func(label):
+            index = self.labels.index(label)
+            self.update_lines()
+            self.lines[index].set_visible(not self.lines[index].get_visible())
+            self.update_lines()
+            plt.draw()
+            
+        
         # onchange
         self.width_slider_min.on_changed(width_slider_changed)
         self.slider_smoothing.on_changed(smoothing_changed)
@@ -324,6 +352,8 @@ class XRD_Peak_search_window:
         self.openfilebutton.on_clicked(open_file)
         self.savebutton.on_clicked(save_peak)
         self.updatebutton.on_clicked(update)
+        self.restore_default_view_button.on_clicked(update)
+        self.check.on_clicked(func)
 
         mng = plt.get_current_fig_manager()
         mng.window.showMaximized()
