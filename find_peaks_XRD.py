@@ -7,6 +7,7 @@ from tkinter.filedialog import askopenfilename
 from numpy import minimum,fft,pad
 from scipy.signal import windows
 from os import path, makedirs
+import yaml
 
 def snip(z,m):
     x = z.copy()
@@ -141,10 +142,13 @@ class XRD_Peak_search_window:
         self.updateax = plt.axes([0.16, 0.805, 0.06, 0.04])
         self.updatebutton = Button(self.updateax, 'Update plot', hovercolor='0.975')
 
+        self.loadconfigax = plt.axes([0.16, 0.605, 0.06, 0.04])
+        self.loadconfigbutton = Button(self.loadconfigax, 'Load config', hovercolor='0.975')
+
         self.restore_default_view_ax = plt.axes([0.16, 0.755, 0.06, 0.04])
         self.restore_default_view_button = Button(self.restore_default_view_ax, 'Restore view', hovercolor='0.975')
         
-        self.saveax = plt.axes([0.8, 0.025, 0.04, 0.04])
+        self.saveax = plt.axes([0.8, 0.025, 0.06, 0.04])
         self.savebutton = Button(self.saveax, 'Save peaks', hovercolor='0.975')
 
         # CHECKBOXES
@@ -216,6 +220,7 @@ class XRD_Peak_search_window:
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
+            self.ax.grid(True)
             self.fig.canvas.draw_idle()
 
     def execute(self):
@@ -258,7 +263,14 @@ class XRD_Peak_search_window:
             with open(outputfile+'_netSpectrum.txt', 'w') as netoutfile:
                 for c, channel in enumerate(self.channels):
                     netoutfile.write(str(channel) + ' ' + format(self.net_spectrum[c], '.2f') +'\n')
-                    
+            
+            options = {
+                'width': self.width_slider_min.val,
+                'smoothing': self.slider_smoothing.val,
+                'background_height' : self.bgheight_slider.val,
+                'snip' : self.m_slider.val}
+            with open(outputfile+'.yaml', 'w') as yamlfile: yaml.dump(options, yamlfile)
+
         def update(event):
             self.update_plot()
 
@@ -313,7 +325,6 @@ class XRD_Peak_search_window:
             self.update_peaks()
             self.update_plot()
 
-
         self.span_remove = SpanSelector(
             self.ax,
             onselect=onselect_remove,
@@ -341,7 +352,18 @@ class XRD_Peak_search_window:
             self.update_lines()
             plt.draw()
             
-        
+        def load_config(loadconfigevent):
+            Tk().withdraw()
+            yamlfilename = askopenfilename(filetypes=(('yaml files', '*.yaml'),('All files', '*.*')))
+            options = None
+            with open(yamlfilename) as yamlfile: options = yaml.full_load(yamlfile)
+            
+            self.bgheight_slider.set_val(options['background_height'])
+            self.width_slider_min.set_val(options['width'])
+            self.slider_smoothing.set_val(options['smoothing'])
+            self.m_slider.set_val(options['snip'])
+            self.update_plot()
+
         # onchange
         self.width_slider_min.on_changed(width_slider_changed)
         self.slider_smoothing.on_changed(smoothing_changed)
@@ -354,6 +376,7 @@ class XRD_Peak_search_window:
         self.updatebutton.on_clicked(update)
         self.restore_default_view_button.on_clicked(update)
         self.check.on_clicked(func)
+        self.loadconfigbutton.on_clicked(load_config)
 
         mng = plt.get_current_fig_manager()
         mng.window.showMaximized()
