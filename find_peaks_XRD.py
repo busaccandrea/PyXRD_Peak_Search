@@ -48,7 +48,7 @@ class XRD_Peak_search_window:
         self.linespec, = self.ax.plot(self.channels, self.spectrum, label='spectrum', marker='.')
         self.linebg,   = self.ax.plot(self.channels, self.background, label='background')
         self.linenet,  = self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.')
-        self.vlines = self.ax.vlines(self.channels[self.peaks[0]], 0, 1000, 'r', label='peak position')#self.channels[self.peaks[0]], 0, self.max_val, 'r', label='peak position')
+        self.vlines = self.ax.vlines(self.channels[self.peaks[0]], 0, 1000, colors='k', linestyles='dashed', label='peak position')#self.channels[self.peaks[0]], 0, self.max_val, 'r', label='peak position')
         self.init_widgets()
         self.update_plot()
 
@@ -76,7 +76,7 @@ class XRD_Peak_search_window:
         self.net_spectrum = self.spectrum - self.background
         self.net_spectrum[self.net_spectrum<0]=0
 
-        self.smoothing_std_default = 3
+        self.smoothing_std_default = 0
         self.smoothing_std = self.smoothing_std_default
         self.net_spectrum = convolve(self.net_spectrum, n=35, std=3)
 
@@ -112,7 +112,7 @@ class XRD_Peak_search_window:
             valmin=0,
             valmax=10,
             valstep = 0.5,
-            valinit=self.smoothing_std
+            valinit=0
         )
 
         self.axbgheight = plt.axes([0.25, 0.15, 0.65, 0.03])
@@ -153,8 +153,8 @@ class XRD_Peak_search_window:
 
         # CHECKBOXES
         self.update_lines()
-
-        self.checkax = plt.axes([0.80, 0.655, 0.1, 0.08])
+        self.checkax = plt.axes([0.12, 0.355, 0.1, 0.1])
+        self.checkax.text(0,1.1, 'show/hide lines box')
         self.check = CheckButtons(self.checkax, self.labels, self.visibility)
     
     def set_spectrum(self, filename):
@@ -207,16 +207,16 @@ class XRD_Peak_search_window:
 
             self.ax.clear()
             self.ax.set_title(path.basename(self.spectrum_filename))
-
-            self.linespec, = self.ax.plot(self.channels, self.spectrum, label='spectrum', marker='.', lw=2)
-            self.linebg, = self.ax.plot(self.channels, self.background, label='background', lw=2)
-            self.linenet, = self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.', lw=2)
+            self.set_background()
+            self.linespec, = self.ax.plot(self.channels, self.spectrum, color='#0fa3b1', label='spectrum', marker='.')
+            self.linebg, = self.ax.plot(self.channels, self.background, color='#f7a072', label='background', lw=3)
+            self.linenet, = self.ax.plot(self.channels, self.net_spectrum, color='#98CE00', label='net spectrum', marker='.', ms=4)
 
             self.linespec.set_visible(self.visibility[0])
             self.linebg.set_visible(self.visibility[1])
             self.linenet.set_visible(self.visibility[2])
             
-            self.ax.vlines(self.channels[self.peaks], 0, 1000, 'r', label='peak position')
+            self.ax.vlines(self.channels[self.peaks], 0, 1000, colors='k', linestyles='dashed', label='peak position')
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
@@ -350,6 +350,7 @@ class XRD_Peak_search_window:
             self.update_lines()
             self.lines[index].set_visible(not self.lines[index].get_visible())
             self.update_lines()
+            self.update_plot()
             plt.draw()
             
         def load_config(loadconfigevent):
