@@ -38,6 +38,7 @@ def read_cif_file():
             'chemical_formula_sum': '',
             'chemical_name_mineral': '',
             'chemical_name_common': '',
+            'cell_measurement_wavelength': '',    
             'theta': [],
             'intensity': []
         }
@@ -49,6 +50,8 @@ def read_cif_file():
                 cif_options['chemical_name_mineral'] = line.split('  ')[-1]
             elif 'chemical_name_common' in line:
                 cif_options['chemical_name_common'] = line.split('  ')[-1]
+            elif 'cell_measurement_wavelength' in line:
+                cif_options['cell_measurement_wavelength'] = line.split('  ')[-1]
             elif 'pd_peak_intensity' in line:
                 peak_append=True
                 continue
@@ -59,6 +62,11 @@ def read_cif_file():
                     continue
                 cif_options['theta'] += [float(splitted[0])]
                 cif_options['intensity'] += [float(splitted[1])]
+
+        d = np.array(cif_options['theta'])
+        d = float(cif_options['cell_measurement_wavelength'])/(2*d)
+    
+        cif_options['theta'] =  np.arcsin(d)*(360/np.pi)
         print('cif readed')
         return cif_options
 
