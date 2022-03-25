@@ -19,6 +19,7 @@ __pycache__/
 *.ini
 *.dat
 *.png
+*.cif
 
 # C extensions
 *.so

@@ -8,6 +8,10 @@ from numpy import minimum,fft,pad
 from scipy.signal import windows
 from os import path, makedirs
 import yaml
+from tkinter.messagebox import askyesno
+from tkinter import filedialog
+from glob import glob
+from shutil import copyfile
 
 def snip(z,m):
     x = z.copy()
@@ -29,9 +33,7 @@ def convolve(z,n=21,std=3):
 
     return y[n * 2:] / sum(kernel)
 
-def read_cif_file():
-    Tk().withdraw()
-    ciffilename = askopenfilename(filetypes=(('cif files', '*.cif'),('All files', '*.*')))
+def read_cif_file(ciffilename):
     with open(ciffilename, 'r') as ciffile:
         lines = ciffile.readlines()
         cif_options = {
@@ -67,9 +69,26 @@ def read_cif_file():
         d = float(cif_options['cell_measurement_wavelength'])/(2*d)
     
         cif_options['theta'] =  np.arcsin(d)*(360/np.pi)
-        print('cif readed')
+
         return cif_options
 
+def convert_database():
+    print('Select folder where cif files are located')
+    Tk().withdraw()
+    source_folder = filedialog.askdirectory(title='Select folder where cif files are located')
+    destination_folder = './phases/'
+    if not path.isdir(destination_folder): makedirs(destination_folder)
+    cifs = glob(source_folder+'/*.cif')
+    if len(cifs) == 0: print('No \'.cif\' files found!')
+    for cif in cifs:
+        cif_options = read_cif_file(cif)
+        _, filename = path.split(cif)
+        s = cif_options['chemical_formula_sum']
+        s = s.replace(' ', '_')
+        s = s.replace('\'', '')
+        s = s.replace('\n', '')
+        new_filename = destination_folder+s+'____'+filename
+        copyfile(cif, new_filename)
 
 class XRD_Peak_search_window:
     def __init__(self) -> None:
@@ -431,7 +450,9 @@ class XRD_Peak_search_window:
             self.update_plot()
 
         def load_cif_db(loadcifevent):
-            self.cif_options = read_cif_file()
+            Tk().withdraw()
+            ciffilename = askopenfilename(filetypes=(('cif files', '*.cif'),('All files', '*.*')), initialdir='./phases/')
+            self.cif_options = read_cif_file(ciffilename=ciffilename)
             self.cifdescriptiontext = 'chemical formula:\n   '+self.cif_options['chemical_formula_sum']+\
                 '\nchemical name mineral:\n   '+self.cif_options['chemical_name_mineral']+\
                     '\nchemical name common:\n   '+self.cif_options['chemical_name_common']
@@ -463,6 +484,11 @@ class XRD_Peak_search_window:
         plt.show()
 
 if __name__=='__main__':
+
+    c = askyesno(title='select yes or no.', message='Do you want to import a new .cif database? \nThe output will be saved in the ./phases/ folder.\
+    \nWARNING! Imported files will be renamed to recognize phases.')
+    if c: convert_database()
+
     if not path.isdir('./data/'): makedirs('./data/')
     xrdwin = XRD_Peak_search_window()
 
