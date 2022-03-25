@@ -180,6 +180,11 @@ class XRD_Peak_search_window:
         self.loadconfigax = plt.axes([0.16, 0.605, 0.06, 0.04])
         self.loadconfigbutton = Button(self.loadconfigax, 'Load config', hovercolor='0.975')
 
+        self.cifdescriptionax = plt.axes([0.0, 0.605, 0.15, 0.2])
+        self.cifdescriptionax.set_title('description of cif loaded')
+        self.cifdescriptiontext = 'No .cif file loaded.'
+        self.cifdescriptionax.text(0,0.8,self.cifdescriptiontext)
+
         self.loadcifax = plt.axes([0.16, 0.555, 0.06, 0.04])
         self.loadcifbutton = Button(self.loadcifax, 'Load cif DB', hovercolor='0.975')
 
@@ -265,6 +270,12 @@ class XRD_Peak_search_window:
             self.linenet.set_visible(self.visibility[2])
             # self.vlines.set_visible(self.visibility[3])
             
+            self.cifdescriptionax.remove()
+            del self.cifdescriptionax
+            self.cifdescriptionax = plt.axes([0.0, 0.605, 0.15, 0.2])
+            self.cifdescriptionax.text(0, 0.2, self.cifdescriptiontext)
+            self.cifdescriptionax.set_axis_off()
+
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
@@ -413,10 +424,14 @@ class XRD_Peak_search_window:
 
         def load_cif_db(loadcifevent):
             self.cif_options = read_cif_file()
+            self.cifdescriptiontext = 'chemical formula:\n   '+self.cif_options['chemical_formula_sum']+\
+                '\nchemical name mineral:\n   '+self.cif_options['chemical_name_mineral']+\
+                    '\nchemical name common:\n   '+self.cif_options['chemical_name_common']
             self.update_plot()
 
         def clear_cif_db(clearcifevent):
             self.cif_options = None
+            self.cifdescriptiontext = 'No .cif file loaded.'
             self.update_plot()
 
         # onchange
