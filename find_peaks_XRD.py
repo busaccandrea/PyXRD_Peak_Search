@@ -29,6 +29,40 @@ def convolve(z,n=21,std=3):
 
     return y[n * 2:] / sum(kernel)
 
+def read_cif_file():
+    Tk().withdraw()
+    ciffilename = askopenfilename(filetypes=(('cif files', '*.cif'),('All files', '*.*')))
+    with open(ciffilename, 'r') as ciffile:
+        lines = ciffile.readlines()
+        cif_options = {
+            'chemical_formula_sum': '',
+            'chemical_name_mineral': '',
+            'chemical_name_common': '',
+            'theta': [],
+            'intensity': []
+        }
+        peak_append = False
+        for line in lines:
+            if 'chemical_formula_sum' in line:
+                cif_options['chemical_formula_sum'] = line.split('  ')[-1]
+            elif 'chemical_name_mineral' in line:
+                cif_options['chemical_name_mineral'] = line.split('  ')[-1]
+            elif 'chemical_name_common' in line:
+                cif_options['chemical_name_common'] = line.split('  ')[-1]
+            elif 'pd_peak_intensity' in line:
+                peak_append=True
+                continue
+            if peak_append:
+                splitted = line.split()
+                if '#' in splitted[0]: 
+                    peak_append=False
+                    continue
+                cif_options['theta'] += [float(splitted[0])]
+                cif_options['intensity'] += [float(splitted[1])]
+        print('cif readed')
+        return cif_options
+
+
 class XRD_Peak_search_window:
     def __init__(self) -> None:
 
@@ -49,6 +83,7 @@ class XRD_Peak_search_window:
         self.linebg,   = self.ax.plot(self.channels, self.background, label='background')
         self.linenet,  = self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.')
         self.vlines = self.ax.vlines(self.channels[self.peaks[0]], 0, 1000, colors='k', linestyles='dashed', label='peak position')#self.channels[self.peaks[0]], 0, self.max_val, 'r', label='peak position')
+        self.cif_options = None
         self.init_widgets()
         self.update_plot()
 
@@ -84,13 +119,13 @@ class XRD_Peak_search_window:
 
         # find peaks with default settings.
         self.peaks = sci_sig.find_peaks(np.log(self.net_spectrum), width=10, height=2)[0]
-
+        self.show_peaks = True
         # once channels is initialized we can set lims on x axis
         self.ax.set_xlim(self.channels[0],self.channels[-1])
 
-    def open_new_file(self):
+    def open_new_file(self, initialdir='./data/'):
         Tk().withdraw()
-        filename = askopenfilename(filetypes=(('dat files', '*.dat'),('All files', '*.*')), initialdir='./')
+        filename = askopenfilename(filetypes=(('dat files', '*.dat'),('All files', '*.*')), initialdir=initialdir)
         return filename
 
     def init_widgets(self):
@@ -145,6 +180,12 @@ class XRD_Peak_search_window:
         self.loadconfigax = plt.axes([0.16, 0.605, 0.06, 0.04])
         self.loadconfigbutton = Button(self.loadconfigax, 'Load config', hovercolor='0.975')
 
+        self.loadcifax = plt.axes([0.16, 0.555, 0.06, 0.04])
+        self.loadcifbutton = Button(self.loadcifax, 'Load cif DB', hovercolor='0.975')
+
+        self.clearcifax = plt.axes([0.12, 0.555, 0.02, 0.04])
+        self.clearcifbutton = Button(self.clearcifax, 'X', color='red', hovercolor='0.975')
+
         self.restore_default_view_ax = plt.axes([0.16, 0.755, 0.06, 0.04])
         self.restore_default_view_button = Button(self.restore_default_view_ax, 'Restore view', hovercolor='0.975')
         
@@ -197,9 +238,10 @@ class XRD_Peak_search_window:
         return arr
 
     def update_lines(self):
-        self.lines = [self.linespec, self.linebg, self.linenet]
+        self.lines = [self.linespec, self.linebg, self.linenet]#, self.vlines]
         self.labels = [str(line.get_label()) for line in self.lines]
         self.visibility = [line.get_visible() for line in self.lines]
+        print('on update lines', self.visibility)
 
     def update_plot(self):
             xlim = self.ax.get_xlim()
@@ -212,11 +254,17 @@ class XRD_Peak_search_window:
             self.linebg, = self.ax.plot(self.channels, self.background, color='#f7a072', label='background', lw=3)
             self.linenet, = self.ax.plot(self.channels, self.net_spectrum, color='#98CE00', label='net spectrum', marker='.', ms=4)
 
+            if self.cif_options != None:
+                self.ax.vlines(self.cif_options['theta'], 0, 1000, colors='r', linestyles='dashed')
+                self.ax.vlines(self.cif_options['theta'], 0, self.cif_options['intensity'], colors='r', linestyles='solid', label='peaks from db', lw=2)
+            
+            self.ax.vlines(self.channels[self.peaks], 0, 1000, colors='k', linestyles='dashed', label='peak position')
+
             self.linespec.set_visible(self.visibility[0])
             self.linebg.set_visible(self.visibility[1])
             self.linenet.set_visible(self.visibility[2])
+            # self.vlines.set_visible(self.visibility[3])
             
-            self.ax.vlines(self.channels[self.peaks], 0, 1000, colors='k', linestyles='dashed', label='peak position')
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
             self.ax.set_ylim(ylim)
@@ -232,10 +280,7 @@ class XRD_Peak_search_window:
             self.update_plot()
 
         def width_slider_changed(val):
-            # I have to update the widthlist
-            # self.width_list = np.arange(self.width_slider_min.val, self.width_slider_max.val, 0.1)
             self.width_list = np.arange(self.width_slider_min.val, 50, 0.1)
-            # I have to update peaks
             self.update_peaks()
             self.update_plot()
 
@@ -345,12 +390,13 @@ class XRD_Peak_search_window:
             button=3
         )
 
-        def func(label):
+        def show_hide_lines(label):
+            self.update_lines()
             index = self.labels.index(label)
-            self.update_lines()
+            # print(self.lines[index].get_visible())
             self.lines[index].set_visible(not self.lines[index].get_visible())
+            # print(self.lines[index].get_visible())
             self.update_lines()
-            self.update_plot()
             plt.draw()
             
         def load_config(loadconfigevent):
@@ -365,6 +411,14 @@ class XRD_Peak_search_window:
             self.m_slider.set_val(options['snip'])
             self.update_plot()
 
+        def load_cif_db(loadcifevent):
+            self.cif_options = read_cif_file()
+            self.update_plot()
+
+        def clear_cif_db(clearcifevent):
+            self.cif_options = None
+            self.update_plot()
+
         # onchange
         self.width_slider_min.on_changed(width_slider_changed)
         self.slider_smoothing.on_changed(smoothing_changed)
@@ -376,8 +430,10 @@ class XRD_Peak_search_window:
         self.savebutton.on_clicked(save_peak)
         self.updatebutton.on_clicked(update)
         self.restore_default_view_button.on_clicked(update)
-        self.check.on_clicked(func)
+        self.check.on_clicked(show_hide_lines)
         self.loadconfigbutton.on_clicked(load_config)
+        self.loadcifbutton.on_clicked(load_cif_db)
+        self.clearcifbutton.on_clicked(clear_cif_db)
 
         mng = plt.get_current_fig_manager()
         mng.window.showMaximized()
