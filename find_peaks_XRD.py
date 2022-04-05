@@ -12,6 +12,7 @@ from tkinter.messagebox import askyesno
 from tkinter import filedialog
 from glob import glob
 from shutil import copyfile
+import tkinter as tk
 
 def snip(z,m):
     x = z.copy()
@@ -64,13 +65,22 @@ def read_cif_file(ciffilename):
                     continue
                 cif_options['theta'] += [float(splitted[0])]
                 cif_options['intensity'] += [float(splitted[1])]
-
-        d = np.array(cif_options['theta'])
-        d = float(cif_options['cell_measurement_wavelength'])/(2*d)
-    
-        cif_options['theta'] =  np.arcsin(d)*(360/np.pi)
-
+        
+        cif_options['theta'] =  d_to_thetas(cif_options['theta'])
+        print('thetas', cif_options['theta'])
         return cif_options
+
+def d_to_thetas(thetas):
+    d = np.array(thetas)
+    d = 1.541874/(2*d)
+    return np.arcsin(d)*(360/np.pi)
+
+def thetas_to_d(thetas):
+    g = np.sin(np.pi * thetas / 360)
+    d = 1.541874 / (2 * g)
+    # print(thetas)
+    # print(d)
+    return d
 
 def convert_database():
     print('Select folder where cif files are located')
@@ -89,6 +99,25 @@ def convert_database():
         s = s.replace('\n', '')
         new_filename = destination_folder+s+'____'+filename
         copyfile(cif, new_filename)
+
+def _tkfetch(entries):
+    for entry in entries:
+        field = entry[0]
+        text  = entry[1].get()
+        print('%s: "%s"' % (field, text), 'TUTTI I TIPI', type(text), type(entry[1]))
+
+def _tkmakeform(root, fields):
+    entries = []
+    for field in fields:
+        row = tk.Frame(root)
+        lab = tk.Label(row, width=15, text=field, anchor='w')
+        ent = tk.Entry(row)
+        row.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+        lab.pack(side=tk.LEFT)
+        ent.pack(side=tk.RIGHT, expand=tk.NO, fill=tk.X)
+        entries.append((field, ent))
+        print('type ent',type(ent))
+    return entries
 
 class XRD_Peak_search_window:
     def __init__(self) -> None:
@@ -331,18 +360,61 @@ class XRD_Peak_search_window:
             self.update_plot()
 
         def save_peak(event):
+            win = Tk()
+            c = askyesno(title='Select yes or no.', message='Do you want to save the output with .cif structure?\nTheta will be replaced by d.')
             base, outputfile = path.split(self.spectrum_filename)
             outputfile, frmt = outputfile.split('.')
             outputfile = self.output_dir + outputfile
+            if c:
+                peaksfile = outputfile +'.cif'
+                fields = ('_formula_sum', '_name_mineral', '_name_common')
+                
+                ents = _tkmakeform(win, fields)
+                win.bind('<Return>', (lambda event, e=ents: _tkfetch(e)))
+                b1 = tk.Button(win, text='Accept',
+                            command=(lambda e=ents: _tkfetch(e)))
+                b1.pack(side=tk.LEFT, padx=5, pady=5)
+                b2 = tk.Button(win, text='Close', command=win.quit)
+                b2.pack(side=tk.LEFT, padx=5, pady=5)
+                
+                win.mainloop()
+                
+                formula = '\''+ ents[0][1].get() + '\''
+                namecommon = '\''+ ents[1][1].get() + '\''
+                namemineral = '\''+ ents[2][1].get() + '\''
+                win.destroy()
+            else: peaksfile = outputfile +'.txt'
 
             # savefig
             extent = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
             self.fig.savefig(outputfile+'.png', bbox_inches=extent.expanded(1.1, 1.2))
             self.net_spectrum = self.normalize(self.net_spectrum)
-            # save peaks: in each row of a file write position and intensity of a peak
-            with open(outputfile+'.txt', 'w') as outfile:
-                for i, channel in enumerate(self.peaks):
-                    outfile.write(str(self.channels[channel]) + ' ' + format(self.net_spectrum[channel], '.2f') +'\n')
+
+            with open(peaksfile, 'w') as outfile:
+                # write loop_, _pd_peak_d_spacing, _pd_peak_intensity
+                outfile.write('_chemical_formula_sum  ' + formula +'\n')
+                outfile.write('_chemical_name_common  ' + namecommon +'\n')
+                outfile.write('_chemical_name_mineral  ' + namemineral +'\n')
+                outfile.write('loop_\n')
+                outfile.write('_pd_peak_d_spacing\n')
+                outfile.write('_pd_peak_intensity\n')
+
+                if c:
+                    #save cif
+                    d = thetas_to_d(self.channels[self.peaks])
+                    print('writing d',d)
+                    for i, d_ in enumerate(d):
+                        intensity = self.net_spectrum[self.peaks[i]]
+                        intensity = format(intensity, '.2f')
+                        print('     ' + str(format(d[i], '.6f')) + ' ' + f'{str(intensity):>14}' +'\n')
+                        outfile.write('     ' + str(format(d[i], '.6f')) + ' ' + f'{str(intensity):>14}' +'\n')
+                    
+                # save peaks: in each row of a file write position and intensity of a peak
+                else:
+                    print('writing', self.channels[self.peaks])
+                    for i, channel in enumerate(self.peaks):
+                        outfile.write(str(self.channels[channel]) + ' ' + format(self.net_spectrum[channel], '.2f') +'\n')
+
             with open(outputfile+'_netSpectrum.txt', 'w') as netoutfile:
                 for c, channel in enumerate(self.channels):
                     netoutfile.write(str(channel) + ' ' + format(self.net_spectrum[c], '.2f') +'\n')
@@ -484,9 +556,10 @@ class XRD_Peak_search_window:
         plt.show()
 
 if __name__=='__main__':
-
+    root = tk.Tk()
     c = askyesno(title='select yes or no.', message='Do you want to import a new .cif database? \nThe output will be saved in the ./phases/ folder.\
     \nWARNING! Imported files will be renamed to recognize phases.')
+    root.destroy()
     if c: convert_database()
 
     if not path.isdir('./data/'): makedirs('./data/')
