@@ -8,7 +8,7 @@ from numpy import minimum,fft,pad
 from scipy.signal import windows
 from os import path, makedirs
 import yaml
-from tkinter.messagebox import askyesno
+from tkinter.messagebox import askyesno, showinfo
 from tkinter import filedialog
 from glob import glob
 from shutil import copyfile
@@ -100,11 +100,6 @@ def convert_database():
         new_filename = destination_folder+s+'____'+filename
         copyfile(cif, new_filename)
 
-def _tkfetch(entries):
-    for entry in entries:
-        field = entry[0]
-        text  = entry[1].get()
-        print('%s: "%s"' % (field, text), 'TUTTI I TIPI', type(text), type(entry[1]))
 
 def _tkmakeform(root, fields):
     entries = []
@@ -360,30 +355,31 @@ class XRD_Peak_search_window:
             self.update_plot()
 
         def save_peak(event):
-            win = Tk()
             c = askyesno(title='Select yes or no.', message='Do you want to save the output with .cif structure?\nTheta will be replaced by d.')
             base, outputfile = path.split(self.spectrum_filename)
             outputfile, frmt = outputfile.split('.')
             outputfile = self.output_dir + outputfile
             if c:
+                win = Tk()
+                
                 peaksfile = outputfile +'.cif'
                 fields = ('_formula_sum', '_name_mineral', '_name_common')
-                
                 ents = _tkmakeform(win, fields)
-                win.bind('<Return>', (lambda event, e=ents: _tkfetch(e)))
-                b1 = tk.Button(win, text='Accept',
-                            command=(lambda e=ents: _tkfetch(e)))
-                b1.pack(side=tk.LEFT, padx=5, pady=5)
-                b2 = tk.Button(win, text='Close', command=win.quit)
+                b2 = tk.Button(win, text='Save&Close', command=win.quit)
                 b2.pack(side=tk.LEFT, padx=5, pady=5)
                 
-                win.mainloop()
+                win.mainloop()  
                 
                 formula = '\''+ ents[0][1].get() + '\''
                 namecommon = '\''+ ents[1][1].get() + '\''
                 namemineral = '\''+ ents[2][1].get() + '\''
+
                 win.destroy()
-            else: peaksfile = outputfile +'.txt'
+            else: 
+                peaksfile = outputfile +'.txt'
+                formula = ''
+                namecommon = ''
+                namemineral = ''
 
             # savefig
             extent = self.ax.get_window_extent().transformed(self.fig.dpi_scale_trans.inverted())
@@ -406,14 +402,14 @@ class XRD_Peak_search_window:
                     for i, d_ in enumerate(d):
                         intensity = self.net_spectrum[self.peaks[i]]
                         intensity = format(intensity, '.2f')
-                        print('     ' + str(format(d[i], '.6f')) + ' ' + f'{str(intensity):>14}' +'\n')
-                        outfile.write('     ' + str(format(d[i], '.6f')) + ' ' + f'{str(intensity):>14}' +'\n')
+                        outfile.write('     ' + str(format(d[i], '.6f')) + f'{str(intensity):>14}' +'\n')
                     
                 # save peaks: in each row of a file write position and intensity of a peak
                 else:
                     print('writing', self.channels[self.peaks])
                     for i, channel in enumerate(self.peaks):
-                        outfile.write(str(self.channels[channel]) + ' ' + format(self.net_spectrum[channel], '.2f') +'\n')
+                        intensity = str(format(self.net_spectrum[channel], '.2f'))
+                        outfile.write('     ' + str(self.channels[channel]) + ' ' + f'{intensity:>14}' +'\n')
 
             with open(outputfile+'_netSpectrum.txt', 'w') as netoutfile:
                 for c, channel in enumerate(self.channels):
@@ -425,6 +421,8 @@ class XRD_Peak_search_window:
                 'background_height' : self.bgheight_slider.val,
                 'snip' : self.m_slider.val}
             with open(outputfile+'.yaml', 'w') as yamlfile: yaml.dump(options, yamlfile)
+
+            showinfo(title='Info', message='Saved!')
 
         def update(event):
             self.update_plot()
