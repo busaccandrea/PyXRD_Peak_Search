@@ -1,7 +1,8 @@
+from turtle import onkeypress
 import scipy.signal as sci_sig
 from matplotlib import pyplot as plt
 import numpy as np
-from matplotlib.widgets import Slider, Button, SpanSelector, CheckButtons
+from matplotlib.widgets import Slider, Button, SpanSelector, CheckButtons, TextBox
 from tkinter import Tk    # from tkinter import Tk for Python 3.x
 from tkinter.filedialog import askopenfilename
 from numpy import minimum,fft,pad
@@ -100,7 +101,6 @@ def convert_database():
         new_filename = destination_folder+s+'____'+filename
         copyfile(cif, new_filename)
 
-
 def _tkmakeform(root, fields):
     entries = []
     for field in fields:
@@ -126,7 +126,7 @@ class XRD_Peak_search_window:
         self.ax.set_xlabel('angles')
         self.ax.set_ylabel('intensity')
 
-        plt.subplots_adjust(left=0.25, bottom=0.35)
+        plt.subplots_adjust(left=0.35, bottom=0.35, right=0.95)
         
         self.init_spectrum()
 
@@ -135,6 +135,9 @@ class XRD_Peak_search_window:
         self.linenet,  = self.ax.plot(self.channels, self.net_spectrum, label='net spectrum', marker='.')
         self.vlines = self.ax.vlines(self.channels[self.peaks[0]], 0, 1000, colors='k', linestyles='dashed', label='peak position')#self.channels[self.peaks[0]], 0, self.max_val, 'r', label='peak position')
         self.cif_options = None
+        self.cif_files = []
+        self.current_cif_index = 0
+        self.current_ciffile = None
         self.init_widgets()
         self.update_plot()
 
@@ -181,7 +184,7 @@ class XRD_Peak_search_window:
 
     def init_widgets(self):
         # SLIDERS
-        self.axwidth_min = plt.axes([0.25, 0.20, 0.215, 0.03])
+        self.axwidth_min = plt.axes([0.35, 0.20, 0.215, 0.03])
         self.width_slider_min = Slider(
             ax=self. axwidth_min,
             label='width min',
@@ -191,7 +194,7 @@ class XRD_Peak_search_window:
             valinit=10
         )
 
-        self.axsmoothing = plt.axes([0.25, 0.1, 0.215, 0.03])
+        self.axsmoothing = plt.axes([0.35, 0.1, 0.215, 0.03])
         self.slider_smoothing = Slider(
             ax=self.axsmoothing,
             label='smoothing',
@@ -201,7 +204,7 @@ class XRD_Peak_search_window:
             valinit=0
         )
 
-        self.axbgheight = plt.axes([0.25, 0.15, 0.65, 0.03])
+        self.axbgheight = plt.axes([0.35, 0.15, 0.55, 0.03])
         self.bgheight_slider = Slider(
         ax=self.axbgheight,
         label='background height',
@@ -222,27 +225,35 @@ class XRD_Peak_search_window:
         )
 
         # BUTTONS
-        self.openfileax = plt.axes([0.16, 0.855, 0.06, 0.04])
+        self.openfileax = plt.axes([0.26, 0.855, 0.06, 0.04])
         self.openfilebutton = Button(self.openfileax, 'Open file', hovercolor='0.975')
 
-        self.updateax = plt.axes([0.16, 0.805, 0.06, 0.04])
+        self.updateax = plt.axes([0.26, 0.805, 0.06, 0.04])
         self.updatebutton = Button(self.updateax, 'Update plot', hovercolor='0.975')
 
-        self.loadconfigax = plt.axes([0.16, 0.605, 0.06, 0.04])
+        self.loadconfigax = plt.axes([0.26, 0.605, 0.06, 0.04])
         self.loadconfigbutton = Button(self.loadconfigax, 'Load config', hovercolor='0.975')
 
-        self.cifdescriptionax = plt.axes([0.0, 0.605, 0.15, 0.2])
+        self.cifdescriptionax = plt.axes([0.0, 0.0, 0.9, 0.9])
         self.cifdescriptionax.set_title('description of cif loaded')
         self.cifdescriptiontext = 'No .cif file loaded.'
         self.cifdescriptionax.text(0,0.8,self.cifdescriptiontext)
 
-        self.loadcifax = plt.axes([0.16, 0.555, 0.06, 0.04])
+        self.textboxax = self.fig.add_axes([0.001, 0.705, 0.2, 0.03])
+        self.textbox = TextBox(self.textboxax, '')
+
+        self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
+        self.ciflistax.set_title('description of cif found')
+        self.ciflisttext = '-'
+        self.ciflistax.text(0,0.8,self.ciflisttext)
+
+        self.loadcifax = plt.axes([0.26, 0.555, 0.06, 0.04])
         self.loadcifbutton = Button(self.loadcifax, 'Load cif DB', hovercolor='0.975')
 
-        self.clearcifax = plt.axes([0.12, 0.555, 0.02, 0.04])
+        self.clearcifax = plt.axes([0.22, 0.555, 0.02, 0.04])
         self.clearcifbutton = Button(self.clearcifax, 'X', color='red', hovercolor='0.975')
 
-        self.restore_default_view_ax = plt.axes([0.16, 0.755, 0.06, 0.04])
+        self.restore_default_view_ax = plt.axes([0.26, 0.755, 0.06, 0.04])
         self.restore_default_view_button = Button(self.restore_default_view_ax, 'Restore view', hovercolor='0.975')
         
         self.saveax = plt.axes([0.8, 0.025, 0.06, 0.04])
@@ -250,7 +261,7 @@ class XRD_Peak_search_window:
 
         # CHECKBOXES
         self.update_lines()
-        self.checkax = plt.axes([0.12, 0.355, 0.1, 0.1])
+        self.checkax = plt.axes([0.22, 0.355, 0.1, 0.1])
         self.checkax.text(0,1.1, 'show/hide lines box')
         self.check = CheckButtons(self.checkax, self.labels, self.visibility)
     
@@ -306,15 +317,15 @@ class XRD_Peak_search_window:
             self.ax.clear()
             self.ax.set_title(path.basename(self.spectrum_filename))
             self.set_background()
-            self.linespec, = self.ax.plot(self.channels, self.spectrum, color='#0fa3b1', label='spectrum', marker='.')
+            self.linespec, = self.ax.plot(self.channels, self.spectrum, color='#333333', alpha=0.8, label='spectrum')
             self.linebg, = self.ax.plot(self.channels, self.background, color='#f7a072', label='background', lw=3)
             self.linenet, = self.ax.plot(self.channels, self.net_spectrum, color='#98CE00', label='net spectrum', marker='.', ms=4)
 
             if self.cif_options != None:
-                self.ax.vlines(self.cif_options['theta'], 0, 1000, colors='r', linestyles='dashed')
+                # self.ax.vlines(self.cif_options['theta'], 0, 1000, colors='r', linestyles='dashed')
                 self.ax.vlines(self.cif_options['theta'], 0, self.cif_options['intensity'], colors='r', linestyles='solid', label='peaks from db', lw=2)
             
-            self.ax.vlines(self.channels[self.peaks], 0, 1000, colors='k', linestyles='dashed', label='peak position')
+            self.ax.vlines(self.channels[self.peaks], 0, 1000, colors='#248794', alpha=0.8, linewidth=2, linestyles='dashed', label='peak position')
 
             self.linespec.set_visible(self.visibility[0])
             self.linebg.set_visible(self.visibility[1])
@@ -323,9 +334,19 @@ class XRD_Peak_search_window:
             
             self.cifdescriptionax.remove()
             del self.cifdescriptionax
-            self.cifdescriptionax = plt.axes([0.0, 0.605, 0.15, 0.2])
-            self.cifdescriptionax.text(0, 0.2, self.cifdescriptiontext)
-            self.cifdescriptionax.set_axis_off()
+            self.cifdescriptionax = plt.axes([0.0, 0.79, 0.2, 0.2])
+            self.cifdescriptionax.text(0.01, 0.97, self.cifdescriptiontext, ha='left', va='top')
+            self.cifdescriptionax.set_facecolor((0.9, 0.9, 0.9))
+            self.cifdescriptionax.set_xticklabels([])
+            self.cifdescriptionax.set_yticklabels([])
+
+            self.ciflistax.remove()
+            del self.ciflistax
+            self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
+            self.ciflistax.text(0.01, 0.99, self.ciflisttext, ha='left',va='top')
+            self.ciflistax.set_facecolor((0.9, 0.9, 0.9))
+            self.ciflistax.set_xticklabels([])
+            self.ciflistax.set_yticklabels([])
 
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
@@ -523,14 +544,19 @@ class XRD_Peak_search_window:
             Tk().withdraw()
             ciffilename = askopenfilename(filetypes=(('cif files', '*.cif'),('All files', '*.*')), initialdir='./phases/')
             self.cif_options = read_cif_file(ciffilename=ciffilename)
-            self.cifdescriptiontext = 'chemical formula:\n   '+self.cif_options['chemical_formula_sum']+\
-                '\nchemical name mineral:\n   '+self.cif_options['chemical_name_mineral']+\
-                    '\nchemical name common:\n   '+self.cif_options['chemical_name_common']
+            self.cifdescriptiontext = 'chemical formula:\n' + self.cif_options['chemical_formula_sum']+\
+                '\nchemical name mineral:\n'+self.cif_options['chemical_name_mineral']+\
+                    '\nchemical name common:\n'+self.cif_options['chemical_name_common']
             self.update_plot()
 
         def clear_cif_db(clearcifevent):
             self.cif_options = None
             self.cifdescriptiontext = 'No .cif file loaded.'
+            self.cif_files = []
+            self.current_cif_index = 0
+            self.ciflisttext = '-'
+            self.textbox.set_val('')
+
             self.update_plot()
 
         # onchange
@@ -549,6 +575,54 @@ class XRD_Peak_search_window:
         self.loadcifbutton.on_clicked(load_cif_db)
         self.clearcifbutton.on_clicked(clear_cif_db)
 
+        def submit(submittext):
+            self.current_cif_index = 0
+            self.cif_files = []
+            if submittext != '':
+                filelist = glob('./phases/*'+submittext+'*')
+                fl = ''
+                for f in filelist:
+                    filename = path.basename(f)
+                    fl += filename+'\n'
+                    self.cif_files.append(filename)
+
+                self.cif_options = read_cif_file(ciffilename='./phases/'+self.cif_files[self.current_cif_index])
+                self.cifdescriptiontext = 'chemical formula:\n' + self.cif_options['chemical_formula_sum']+\
+                    '\nchemical name mineral:\n'+self.cif_options['chemical_name_mineral']+\
+                        '\nchemical name common:\n'+self.cif_options['chemical_name_common']
+
+                self.ciflisttext = fl
+            else: 
+                self.ciflisttext = '-'
+                self.cif_options = None
+                self.cifdescriptiontext = 'No .cif file loaded.'
+
+            self.update_plot()
+                
+        self.textbox.on_submit(submit)
+
+        def onkeypress(key):
+            if key.key == 'right':
+                print('pressed right key', self.cif_files)
+                if self.current_cif_index<len(self.cif_files)-1: 
+                    self.current_cif_index += 1 
+                    self.cif_options = read_cif_file(ciffilename='./phases/'+self.cif_files[self.current_cif_index])
+                    self.cifdescriptiontext = 'chemical formula:\n' + self.cif_options['chemical_formula_sum']+\
+                        '\nchemical name mineral:\n'+self.cif_options['chemical_name_mineral']+\
+                            '\nchemical name common:\n'+self.cif_options['chemical_name_common']
+                    self.update_plot()
+
+            if key.key == 'left':
+                print('pressed left key', self.cif_files)
+                if self.current_cif_index>0:
+                    self.current_cif_index -= 1 
+                    self.cif_options = read_cif_file(ciffilename='./phases/'+self.cif_files[self.current_cif_index])
+                    self.cifdescriptiontext = 'chemical formula:\n' + self.cif_options['chemical_formula_sum']+\
+                        '\nchemical name mineral:\n'+self.cif_options['chemical_name_mineral']+\
+                            '\nchemical name common:\n'+self.cif_options['chemical_name_common']
+                    self.update_plot()
+
+        self.fig.canvas.mpl_connect('key_press_event', onkeypress)
         mng = plt.get_current_fig_manager()
         mng.window.showMaximized()
         plt.show()
