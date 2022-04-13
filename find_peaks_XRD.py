@@ -14,6 +14,7 @@ from tkinter import filedialog
 from glob import glob
 from shutil import copyfile
 import tkinter as tk
+import re
 
 def snip(z,m):
     x = z.copy()
@@ -242,10 +243,10 @@ class XRD_Peak_search_window:
         self.textboxax = self.fig.add_axes([0.001, 0.705, 0.2, 0.03])
         self.textbox = TextBox(self.textboxax, '')
 
-        self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
-        self.ciflistax.set_title('description of cif found')
-        self.ciflisttext = '-'
-        self.ciflistax.text(0,0.8,self.ciflisttext)
+        # self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
+        # self.ciflistax.set_title('description of cif found')
+        # self.ciflisttext = '-'
+        # self.ciflistax.text(0,0.8,self.ciflisttext)
 
         self.loadcifax = plt.axes([0.26, 0.555, 0.06, 0.04])
         self.loadcifbutton = Button(self.loadcifax, 'Load cif DB', hovercolor='0.975')
@@ -321,9 +322,18 @@ class XRD_Peak_search_window:
             self.linebg, = self.ax.plot(self.channels, self.background, color='#f7a072', label='background', lw=3)
             self.linenet, = self.ax.plot(self.channels, self.net_spectrum, color='#98CE00', label='net spectrum', marker='.', ms=4)
 
+            self.cifdescriptionax.remove()
+            del self.cifdescriptionax
+            self.cifdescriptionax = plt.axes([0.0, 0.79, 0.2, 0.2])
+            self.cifdescriptionax.text(0.01, 0.97, self.cifdescriptiontext, ha='left', va='top', fontweight='bold')
+            self.cifdescriptionax.set_xticklabels([])
+            self.cifdescriptionax.set_yticklabels([])
+
             if self.cif_options != None:
-                # self.ax.vlines(self.cif_options['theta'], 0, 1000, colors='r', linestyles='dashed')
                 self.ax.vlines(self.cif_options['theta'], 0, self.cif_options['intensity'], colors='r', linestyles='solid', label='peaks from db', lw=2)
+                self.cifdescriptionax.set_facecolor((128/255, 241/255, 132/255))
+            else: 
+                self.cifdescriptionax.set_facecolor((0.9, 0.9, 0.9))
             
             self.ax.vlines(self.channels[self.peaks], 0, 1000, colors='#248794', alpha=0.8, linewidth=2, linestyles='dashed', label='peak position')
 
@@ -332,21 +342,13 @@ class XRD_Peak_search_window:
             self.linenet.set_visible(self.visibility[2])
             # self.vlines.set_visible(self.visibility[3])
             
-            self.cifdescriptionax.remove()
-            del self.cifdescriptionax
-            self.cifdescriptionax = plt.axes([0.0, 0.79, 0.2, 0.2])
-            self.cifdescriptionax.text(0.01, 0.97, self.cifdescriptiontext, ha='left', va='top')
-            self.cifdescriptionax.set_facecolor((0.9, 0.9, 0.9))
-            self.cifdescriptionax.set_xticklabels([])
-            self.cifdescriptionax.set_yticklabels([])
-
-            self.ciflistax.remove()
-            del self.ciflistax
-            self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
-            self.ciflistax.text(0.01, 0.99, self.ciflisttext, ha='left',va='top')
-            self.ciflistax.set_facecolor((0.9, 0.9, 0.9))
-            self.ciflistax.set_xticklabels([])
-            self.ciflistax.set_yticklabels([])
+            # self.ciflistax.remove()
+            # del self.ciflistax
+            # self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
+            # self.ciflistax.text(0.01, 0.99, self.ciflisttext, ha='left',va='top')
+            # self.ciflistax.set_facecolor((0.9, 0.9, 0.9))
+            # self.ciflistax.set_xticklabels([])
+            # self.ciflistax.set_yticklabels([])
 
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
@@ -554,7 +556,7 @@ class XRD_Peak_search_window:
             self.cifdescriptiontext = 'No .cif file loaded.'
             self.cif_files = []
             self.current_cif_index = 0
-            self.ciflisttext = '-'
+            # self.ciflisttext = '-'
             self.textbox.set_val('')
 
             self.update_plot()
@@ -578,8 +580,32 @@ class XRD_Peak_search_window:
         def submit(submittext):
             self.current_cif_index = 0
             self.cif_files = []
+
             if submittext != '':
-                filelist = glob('./phases/*'+submittext+'*')
+                filelist = []
+                
+                if ',' in submittext or ' ' in submittext:
+                    if ',' in submittext:
+                        submittext = submittext.replace(' ', '')
+                        elements = submittext.split(',')
+                        
+                    else: elements = submittext.split(' ')
+                    
+                    filelist = glob('./phases/*'+elements[0]+'*')
+                    print('\n\nfilelist iniziale!!!!!', len(filelist),'\n',filelist)
+                    filelist_ = filelist.copy()
+                    for element in elements:
+                        for f in filelist_:
+                            if not (element in path.basename(f)): filelist.remove(f); print('file removed because', element, 'not in',  path.basename(f), len (filelist))
+                            
+                            else: print('file keeped because', element, 'in', path.basename(f))
+
+                    print('\n\nfilelist finale!!!!!', len(filelist),'\n',filelist, '\n\n\n')
+
+                    
+
+                else: filelist = glob('./phases/*'+submittext+'*')
+
                 fl = ''
                 for f in filelist:
                     filename = path.basename(f)
@@ -587,13 +613,11 @@ class XRD_Peak_search_window:
                     self.cif_files.append(filename)
 
                 self.cif_options = read_cif_file(ciffilename='./phases/'+self.cif_files[self.current_cif_index])
-                self.cifdescriptiontext = 'chemical formula:\n' + self.cif_options['chemical_formula_sum']+\
+                self.cifdescriptiontext = 'number of files found:   ' + str(len(self.cif_files))+'\n\nchemical formula:\n' + self.cif_options['chemical_formula_sum']+\
                     '\nchemical name mineral:\n'+self.cif_options['chemical_name_mineral']+\
                         '\nchemical name common:\n'+self.cif_options['chemical_name_common']
 
-                self.ciflisttext = fl
             else: 
-                self.ciflisttext = '-'
                 self.cif_options = None
                 self.cifdescriptiontext = 'No .cif file loaded.'
 
@@ -602,25 +626,23 @@ class XRD_Peak_search_window:
         self.textbox.on_submit(submit)
 
         def onkeypress(key):
-            if key.key == 'right':
-                print('pressed right key', self.cif_files)
-                if self.current_cif_index<len(self.cif_files)-1: 
-                    self.current_cif_index += 1 
-                    self.cif_options = read_cif_file(ciffilename='./phases/'+self.cif_files[self.current_cif_index])
-                    self.cifdescriptiontext = 'chemical formula:\n' + self.cif_options['chemical_formula_sum']+\
-                        '\nchemical name mineral:\n'+self.cif_options['chemical_name_mineral']+\
-                            '\nchemical name common:\n'+self.cif_options['chemical_name_common']
-                    self.update_plot()
+            if key.key == 'left' or key.key == 'right':
+                if key.key == 'right':
+                    print('pressed right key', self.cif_files)
+                    if self.current_cif_index<len(self.cif_files)-1: 
+                        self.current_cif_index += 1 
 
-            if key.key == 'left':
-                print('pressed left key', self.cif_files)
-                if self.current_cif_index>0:
-                    self.current_cif_index -= 1 
-                    self.cif_options = read_cif_file(ciffilename='./phases/'+self.cif_files[self.current_cif_index])
-                    self.cifdescriptiontext = 'chemical formula:\n' + self.cif_options['chemical_formula_sum']+\
-                        '\nchemical name mineral:\n'+self.cif_options['chemical_name_mineral']+\
-                            '\nchemical name common:\n'+self.cif_options['chemical_name_common']
-                    self.update_plot()
+                if key.key == 'left':
+                    print('pressed left key', self.cif_files)
+                    if self.current_cif_index>0:
+                        self.current_cif_index -= 1 
+                
+                self.cif_options = read_cif_file(ciffilename='./phases/'+self.cif_files[self.current_cif_index])
+                self.cifdescriptiontext = 'number of files found:   ' + str(len(self.cif_files))+'\n\nchemical formula:\n' + self.cif_options['chemical_formula_sum']+\
+                    '\nchemical name mineral:\n'+self.cif_options['chemical_name_mineral']+\
+                        '\nchemical name common:\n'+self.cif_options['chemical_name_common']
+
+                self.update_plot()
 
         self.fig.canvas.mpl_connect('key_press_event', onkeypress)
         mng = plt.get_current_fig_manager()
@@ -628,13 +650,15 @@ class XRD_Peak_search_window:
         plt.show()
 
 if __name__=='__main__':
-    root = tk.Tk()
-    c = askyesno(title='select yes or no.', message='Do you want to import a new .cif database? \nThe output will be saved in the ./phases/ folder.\
-    \nWARNING! Imported files will be renamed to recognize phases.')
-    root.destroy()
-    if c: convert_database()
-
     if not path.isdir('./data/'): makedirs('./data/')
+
+    if not glob('./phases/*'):
+        root = tk.Tk()
+        c = askyesno(title='select yes or no.', message='Do you want to import a new .cif database? \nThe output will be saved in the ./phases/ folder.\
+        \nWARNING! Imported files will be renamed to recognize phases.')
+        root.destroy()
+        if c: convert_database()
+
     xrdwin = XRD_Peak_search_window()
 
     xrdwin.ax.legend(frameon=True)
