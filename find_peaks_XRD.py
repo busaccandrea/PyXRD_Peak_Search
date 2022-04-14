@@ -1,6 +1,7 @@
 from turtle import onkeypress
 import scipy.signal as sci_sig
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
 import numpy as np
 from matplotlib.widgets import Slider, Button, SpanSelector, CheckButtons, TextBox
 from tkinter import Tk    # from tkinter import Tk for Python 3.x
@@ -68,7 +69,7 @@ def read_cif_file(ciffilename):
                 cif_options['intensity'] += [float(splitted[1])]
         
         cif_options['theta'] =  d_to_thetas(cif_options['theta'])
-        print('thetas', cif_options['theta'])
+        # print('thetas', cif_options['theta'])
         return cif_options
 
 def d_to_thetas(thetas):
@@ -141,6 +142,7 @@ class XRD_Peak_search_window:
         self.current_cif_index = 0
         self.current_ciffile = None
         self.asterisks = [] 
+        self.cif_table = None
 
         self.init_widgets()
         self.update_plot()
@@ -179,9 +181,10 @@ class XRD_Peak_search_window:
         self.peaks = sci_sig.find_peaks(np.log(self.net_spectrum), width=10, height=2)[0]
         self.show_peaks = True
         # once channels is initialized we can set lims on x axis
-        self.ax.set_xlim(self.channels[0],self.channels[-1])
         self.x_default_lims=[self.channels[0], self.channels[-1]]
-        self.y_default_lims=[-20, np.max(self.peaks)]
+        self.y_default_lims=[-50, 1050]
+        self.ax.set_xlim(self.x_default_lims)
+        self.ax.set_ylim(self.y_default_lims)
 
     def open_new_file(self, initialdir='./data/'):
         Tk().withdraw()
@@ -199,9 +202,9 @@ class XRD_Peak_search_window:
             valstep = 0.1,
             valinit=10
         )
-        self.axwidth_addbutton = plt.axes([0.58, 0.22, 0.015, 0.01])
+        self.axwidth_addbutton = plt.axes([0.59, 0.22, 0.015, 0.01])
         self.width_slider_min_addbutton = Button(self.axwidth_addbutton, '+', hovercolor='0.975')
-        self.axwidth_subbutton = plt.axes([0.58, 0.205, 0.015, 0.01])
+        self.axwidth_subbutton = plt.axes([0.59, 0.205, 0.015, 0.01])
         self.width_slider_min_subbutton = Button(self.axwidth_subbutton, '-', hovercolor='0.975')
 
         self.axsmoothing = plt.axes([0.35, 0.1, 0.215, 0.03])
@@ -213,9 +216,9 @@ class XRD_Peak_search_window:
             valstep = 0.5,
             valinit=0
         )
-        self.axsmoothing_addbutton = plt.axes([0.58, 0.12, 0.015, 0.01])
+        self.axsmoothing_addbutton = plt.axes([0.59, 0.12, 0.015, 0.01])
         self.smoothing_slider_min_addbutton = Button(self.axsmoothing_addbutton, '+', hovercolor='0.975')
-        self.axsmoothing_subbutton = plt.axes([0.58, 0.105, 0.015, 0.01])
+        self.axsmoothing_subbutton = plt.axes([0.59, 0.105, 0.015, 0.01])
         self.smoothing_slider_min_subbutton = Button(self.axsmoothing_subbutton, '-', hovercolor='0.975')
 
         self.axbgheight = plt.axes([0.35, 0.15, 0.55, 0.03])
@@ -227,9 +230,9 @@ class XRD_Peak_search_window:
         valstep = 1,
         valinit=0
         )
-        self.axbheight_addbutton = plt.axes([0.92, 0.17, 0.015, 0.01])
+        self.axbheight_addbutton = plt.axes([0.93, 0.17, 0.015, 0.01])
         self.bheight_slider_min_addbutton = Button(self.axbheight_addbutton, '+', hovercolor='0.975')
-        self.axbheight_subbutton = plt.axes([0.92, 0.155, 0.015, 0.01])
+        self.axbheight_subbutton = plt.axes([0.93, 0.155, 0.015, 0.01])
         self.bheight_slider_min_subbutton = Button(self.axbheight_subbutton, '-', hovercolor='0.975')
         
         self.axsnip = plt.axes([0.684, 0.20, 0.215, 0.03])
@@ -241,9 +244,9 @@ class XRD_Peak_search_window:
         valstep = 1,
         valinit=16
         )
-        self.axsnip_addbutton = plt.axes([0.92, 0.22, 0.015, 0.01])
+        self.axsnip_addbutton = plt.axes([0.93, 0.22, 0.015, 0.01])
         self.snip_slider_min_addbutton = Button(self.axsnip_addbutton, '+', hovercolor='0.975')
-        self.axsnip_subbutton = plt.axes([0.92, 0.205, 0.015, 0.01])
+        self.axsnip_subbutton = plt.axes([0.93, 0.205, 0.015, 0.01])
         self.snip_slider_min_subbutton = Button(self.axsnip_subbutton, '-', hovercolor='0.975')
 
         self.axdeltatheta = plt.axes([0.684, 0.1, 0.215, 0.03])
@@ -255,9 +258,9 @@ class XRD_Peak_search_window:
         valstep = 0.01,
         valinit=0.1
         )
-        self.axdeltatheta_addbutton = plt.axes([0.92, 0.12, 0.015, 0.01])
+        self.axdeltatheta_addbutton = plt.axes([0.93, 0.12, 0.015, 0.01])
         self.deltatheta_slider_min_addbutton = Button(self.axdeltatheta_addbutton, '+', hovercolor='0.975')
-        self.axdeltatheta_subbutton = plt.axes([0.92, 0.105, 0.015, 0.01])
+        self.axdeltatheta_subbutton = plt.axes([0.93, 0.105, 0.015, 0.01])
         self.deltatheta_slider_min_subbutton = Button(self.axdeltatheta_subbutton, '-', hovercolor='0.975')
 
         # BUTTONS
@@ -280,7 +283,7 @@ class XRD_Peak_search_window:
 
         self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
         self.ciflistax.set_title('description of cif found')
-        self.ciflisttext = '-'
+        self.ciflisttext = ''
         self.ciflistax.text(0,0.8,self.ciflisttext)
 
         self.loadcifax = plt.axes([0.26, 0.555, 0.06, 0.04])
@@ -363,18 +366,32 @@ class XRD_Peak_search_window:
             self.cifdescriptionax.text(0.01, 0.97, self.cifdescriptiontext, ha='left', va='top', fontweight='bold')
             self.cifdescriptionax.set_xticklabels([])
             self.cifdescriptionax.set_yticklabels([])
+            
+            self.ciflistax.remove()
+            del self.ciflistax
+            self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
+            self.ciflistax.set_xticklabels([])
+            self.ciflistax.set_yticklabels([])
 
             if self.cif_options != None:
                 self.ax.vlines(self.cif_options['theta'], 0, self.cif_options['intensity'], colors='r', linestyles='solid', label='peaks from db', lw=2)
-                print(self.cif_options['theta'], 'peaks', self.channels[self.peaks])
 
                 self.asterisks = [] 
+                celltext = []
                 for dbpk, dbpeak in enumerate(self.cif_options['theta']):
                     for p, peak in enumerate(self.channels[self.peaks]):
-                        if np.abs(dbpeak - peak) < self.deltatheta_slider.val: self.asterisks += [peak]
-                print(self.asterisks)
+                        if np.abs(dbpeak - peak) < self.deltatheta_slider.val: 
+                            self.asterisks += [peak]
+                            celltext.append([format(peak, '.2f'),format(dbpeak, '.2f')])
+
                 self.ax.plot(self.asterisks, np.zeros(len(self.asterisks))-20, 'k', linewidth=0, marker='*', ms=10)
                 self.cifdescriptionax.set_facecolor((128/255, 241/255, 132/255))
+
+                missing_peaks = self.cif_options['theta'][self.cif_options['theta']>self.x_default_lims[0]]
+                missing_peaks = missing_peaks[missing_peaks<self.x_default_lims[1]]
+                
+                celltext.append(['# missing peaks', str(missing_peaks.size - len(self.asterisks))])
+                self.ciflistax.table(cellText=celltext, colLabels=['Exp', 'cif'], loc='upper center', cellLoc='center')
 
             else: 
                 self.cifdescriptionax.set_facecolor((0.9, 0.9, 0.9))
@@ -384,15 +401,6 @@ class XRD_Peak_search_window:
             self.linespec.set_visible(self.visibility[0])
             self.linebg.set_visible(self.visibility[1])
             self.linenet.set_visible(self.visibility[2])
-            # self.vlines.set_visible(self.visibility[3])
-            
-            self.ciflistax.remove()
-            del self.ciflistax
-            self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
-            self.ciflistax.text(0.01, 0.99, self.ciflisttext, ha='left',va='top')
-            self.ciflistax.set_facecolor((0.9, 0.9, 0.9))
-            self.ciflistax.set_xticklabels([])
-            self.ciflistax.set_yticklabels([])
 
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
@@ -414,7 +422,7 @@ class XRD_Peak_search_window:
             self.update_plot()
 
         def deltatheta_slider_changed(val):
-            print('deltatheta', self.cif_options['theta'])
+            # print('deltatheta', self.cif_options['theta'])
             self.update_plot()
 
         def open_file(event):
@@ -540,7 +548,7 @@ class XRD_Peak_search_window:
                     indmax=ind
 
             self.peaks = np.sort(np.array(list(self.peaks)+list(indmax[0])))
-            print(self.peaks)
+            # print(self.peaks)
             self.update_plot()
 
         def smoothing_changed(val):
@@ -604,7 +612,7 @@ class XRD_Peak_search_window:
             self.cifdescriptiontext = 'No .cif file loaded.'
             self.cif_files = []
             self.current_cif_index = 0
-            self.ciflisttext = '-'
+            self.ciflisttext = ''
             self.textbox.set_val('')
 
             self.update_plot()
@@ -678,7 +686,7 @@ class XRD_Peak_search_window:
                     else: elements = submittext.split(' ')
                     
                     filelist = glob('./phases/*'+elements[0]+'*')
-                    print('\n\nfilelist iniziale!!!!!', len(filelist),'\n',filelist)
+                    # print('\n\nfilelist iniziale!!!!!', len(filelist),'\n',filelist)
                     filelist_ = filelist.copy()
                     for element in elements:
                         for f in filelist_:
@@ -686,7 +694,7 @@ class XRD_Peak_search_window:
                             
                             else: print('file keeped because', element, 'in', path.basename(f))
 
-                    print('\n\nfilelist finale!!!!!', len(filelist),'\n',filelist, '\n\n\n')
+                    # print('\n\nfilelist finale!!!!!', len(filelist),'\n',filelist, '\n\n\n')
 
                     
 
@@ -714,12 +722,12 @@ class XRD_Peak_search_window:
         def onkeypress(key):
             if key.key == 'left' or key.key == 'right':
                 if key.key == 'right':
-                    print('pressed right key', self.cif_files)
+                    print('pressed right key')
                     if self.current_cif_index<len(self.cif_files)-1: 
                         self.current_cif_index += 1 
 
                 if key.key == 'left':
-                    print('pressed left key', self.cif_files)
+                    print('pressed left key')
                     if self.current_cif_index>0:
                         self.current_cif_index -= 1 
                 
