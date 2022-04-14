@@ -14,7 +14,6 @@ from tkinter import filedialog
 from glob import glob
 from shutil import copyfile
 import tkinter as tk
-import re
 
 def snip(z,m):
     x = z.copy()
@@ -124,6 +123,8 @@ class XRD_Peak_search_window:
         self.width_default = 10
 
         self.fig, self.ax = plt.subplots()
+        self.x_default_lims = [0,0]
+        self.y_default_lims = [0,0]
         self.ax.set_xlabel('angles')
         self.ax.set_ylabel('intensity')
 
@@ -139,6 +140,8 @@ class XRD_Peak_search_window:
         self.cif_files = []
         self.current_cif_index = 0
         self.current_ciffile = None
+        self.asterisks = [] 
+
         self.init_widgets()
         self.update_plot()
 
@@ -177,6 +180,8 @@ class XRD_Peak_search_window:
         self.show_peaks = True
         # once channels is initialized we can set lims on x axis
         self.ax.set_xlim(self.channels[0],self.channels[-1])
+        self.x_default_lims=[self.channels[0], self.channels[-1]]
+        self.y_default_lims=[-20, np.max(self.peaks)]
 
     def open_new_file(self, initialdir='./data/'):
         Tk().withdraw()
@@ -223,6 +228,16 @@ class XRD_Peak_search_window:
         valmax=50,
         valstep = 1,
         valinit=16
+        )
+
+        self.axdeltatheta = plt.axes([0.65, 0.1, 0.1, 0.03])
+        self.deltatheta_slider = Slider(
+        ax=self.axdeltatheta,
+        label=r'$\Delta$ theta',
+        valmin=0.01,
+        valmax=0.5,
+        valstep = 0.01,
+        valinit=0.1
         )
 
         # BUTTONS
@@ -331,7 +346,16 @@ class XRD_Peak_search_window:
 
             if self.cif_options != None:
                 self.ax.vlines(self.cif_options['theta'], 0, self.cif_options['intensity'], colors='r', linestyles='solid', label='peaks from db', lw=2)
+                print(self.cif_options['theta'], 'peaks', self.channels[self.peaks])
+
+                self.asterisks = [] 
+                for dbpk, dbpeak in enumerate(self.cif_options['theta']):
+                    for p, peak in enumerate(self.channels[self.peaks]):
+                        if np.abs(dbpeak - peak) < self.deltatheta_slider.val: self.asterisks += [peak]
+                print(self.asterisks)
+                self.ax.plot(self.asterisks, np.zeros(len(self.asterisks))-20, 'k', linewidth=0, marker='*', ms=10)
                 self.cifdescriptionax.set_facecolor((128/255, 241/255, 132/255))
+
             else: 
                 self.cifdescriptionax.set_facecolor((0.9, 0.9, 0.9))
             
@@ -367,6 +391,10 @@ class XRD_Peak_search_window:
         def width_slider_changed(val):
             self.width_list = np.arange(self.width_slider_min.val, 50, 0.1)
             self.update_peaks()
+            self.update_plot()
+
+        def deltatheta_slider_changed(val):
+            print('deltatheta', self.cif_options['theta'])
             self.update_plot()
 
         def open_file(event):
@@ -561,17 +589,22 @@ class XRD_Peak_search_window:
 
             self.update_plot()
 
+        def restore_view(event):
+            self.ax.set_xlim(self.x_default_lims)
+            self.ax.set_ylim(-50, 1050)
+            self.update_plot()
         # onchange
         self.width_slider_min.on_changed(width_slider_changed)
         self.slider_smoothing.on_changed(smoothing_changed)
         self.m_slider.on_changed(update_background)
         self.bgheight_slider.on_changed(update_background)
+        self.deltatheta_slider.on_changed(deltatheta_slider_changed)
 
         # onclick
         self.openfilebutton.on_clicked(open_file)
         self.savebutton.on_clicked(save_peak)
         self.updatebutton.on_clicked(update)
-        self.restore_default_view_button.on_clicked(update)
+        self.restore_default_view_button.on_clicked(restore_view)
         self.check.on_clicked(show_hide_lines)
         self.loadconfigbutton.on_clicked(load_config)
         self.loadcifbutton.on_clicked(load_cif_db)
