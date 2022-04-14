@@ -191,7 +191,7 @@ class XRD_Peak_search_window:
     def init_widgets(self):
         # SLIDERS
         self.axwidth_min = plt.axes([0.35, 0.20, 0.215, 0.03])
-        self.width_slider_min = Slider(
+        self.width_slider = Slider(
             ax=self. axwidth_min,
             label='width min',
             valmin=0,
@@ -199,9 +199,13 @@ class XRD_Peak_search_window:
             valstep = 0.1,
             valinit=10
         )
+        self.axwidth_addbutton = plt.axes([0.58, 0.22, 0.015, 0.01])
+        self.width_slider_min_addbutton = Button(self.axwidth_addbutton, '+', hovercolor='0.975')
+        self.axwidth_subbutton = plt.axes([0.58, 0.205, 0.015, 0.01])
+        self.width_slider_min_subbutton = Button(self.axwidth_subbutton, '-', hovercolor='0.975')
 
         self.axsmoothing = plt.axes([0.35, 0.1, 0.215, 0.03])
-        self.slider_smoothing = Slider(
+        self.smoothing_slider = Slider(
             ax=self.axsmoothing,
             label='smoothing',
             valmin=0,
@@ -209,6 +213,10 @@ class XRD_Peak_search_window:
             valstep = 0.5,
             valinit=0
         )
+        self.axsmoothing_addbutton = plt.axes([0.58, 0.12, 0.015, 0.01])
+        self.smoothing_slider_min_addbutton = Button(self.axsmoothing_addbutton, '+', hovercolor='0.975')
+        self.axsmoothing_subbutton = plt.axes([0.58, 0.105, 0.015, 0.01])
+        self.smoothing_slider_min_subbutton = Button(self.axsmoothing_subbutton, '-', hovercolor='0.975')
 
         self.axbgheight = plt.axes([0.35, 0.15, 0.55, 0.03])
         self.bgheight_slider = Slider(
@@ -219,18 +227,26 @@ class XRD_Peak_search_window:
         valstep = 1,
         valinit=0
         )
+        self.axbheight_addbutton = plt.axes([0.92, 0.17, 0.015, 0.01])
+        self.bheight_slider_min_addbutton = Button(self.axbheight_addbutton, '+', hovercolor='0.975')
+        self.axbheight_subbutton = plt.axes([0.92, 0.155, 0.015, 0.01])
+        self.bheight_slider_min_subbutton = Button(self.axbheight_subbutton, '-', hovercolor='0.975')
         
-        self.axm = plt.axes([0.65, 0.20, 0.215, 0.03])
-        self.m_slider = Slider(
-        ax=self.axm,
+        self.axsnip = plt.axes([0.684, 0.20, 0.215, 0.03])
+        self.snip_slider = Slider(
+        ax=self.axsnip,
         label='snip width',
         valmin=10,
         valmax=50,
         valstep = 1,
         valinit=16
         )
+        self.axsnip_addbutton = plt.axes([0.92, 0.22, 0.015, 0.01])
+        self.snip_slider_min_addbutton = Button(self.axsnip_addbutton, '+', hovercolor='0.975')
+        self.axsnip_subbutton = plt.axes([0.92, 0.205, 0.015, 0.01])
+        self.snip_slider_min_subbutton = Button(self.axsnip_subbutton, '-', hovercolor='0.975')
 
-        self.axdeltatheta = plt.axes([0.65, 0.1, 0.1, 0.03])
+        self.axdeltatheta = plt.axes([0.684, 0.1, 0.215, 0.03])
         self.deltatheta_slider = Slider(
         ax=self.axdeltatheta,
         label=r'$\Delta$ theta',
@@ -239,6 +255,10 @@ class XRD_Peak_search_window:
         valstep = 0.01,
         valinit=0.1
         )
+        self.axdeltatheta_addbutton = plt.axes([0.92, 0.12, 0.015, 0.01])
+        self.deltatheta_slider_min_addbutton = Button(self.axdeltatheta_addbutton, '+', hovercolor='0.975')
+        self.axdeltatheta_subbutton = plt.axes([0.92, 0.105, 0.015, 0.01])
+        self.deltatheta_slider_min_subbutton = Button(self.axdeltatheta_subbutton, '-', hovercolor='0.975')
 
         # BUTTONS
         self.openfileax = plt.axes([0.26, 0.855, 0.06, 0.04])
@@ -258,10 +278,10 @@ class XRD_Peak_search_window:
         self.textboxax = self.fig.add_axes([0.001, 0.705, 0.2, 0.03])
         self.textbox = TextBox(self.textboxax, '')
 
-        # self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
-        # self.ciflistax.set_title('description of cif found')
-        # self.ciflisttext = '-'
-        # self.ciflistax.text(0,0.8,self.ciflisttext)
+        self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
+        self.ciflistax.set_title('description of cif found')
+        self.ciflisttext = '-'
+        self.ciflistax.text(0,0.8,self.ciflisttext)
 
         self.loadcifax = plt.axes([0.26, 0.555, 0.06, 0.04])
         self.loadcifbutton = Button(self.loadcifax, 'Load cif DB', hovercolor='0.975')
@@ -296,7 +316,7 @@ class XRD_Peak_search_window:
         self.max_val = np.max(self.spectrum)
 
     def set_background(self):
-        self.background = snip(convolve(self.spectrum, n=35, std=3), m=self.m_slider.val)
+        self.background = snip(convolve(self.spectrum, n=35, std=3), m=self.snip_slider.val)
         self.background = self.background + self.bgheight_slider.val
         self.net_spectrum = self.spectrum - self.background
         
@@ -339,7 +359,7 @@ class XRD_Peak_search_window:
 
             self.cifdescriptionax.remove()
             del self.cifdescriptionax
-            self.cifdescriptionax = plt.axes([0.0, 0.79, 0.2, 0.2])
+            self.cifdescriptionax = plt.axes([0.0, 0.79, 0.25, 0.2])
             self.cifdescriptionax.text(0.01, 0.97, self.cifdescriptiontext, ha='left', va='top', fontweight='bold')
             self.cifdescriptionax.set_xticklabels([])
             self.cifdescriptionax.set_yticklabels([])
@@ -366,13 +386,13 @@ class XRD_Peak_search_window:
             self.linenet.set_visible(self.visibility[2])
             # self.vlines.set_visible(self.visibility[3])
             
-            # self.ciflistax.remove()
-            # del self.ciflistax
-            # self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
-            # self.ciflistax.text(0.01, 0.99, self.ciflisttext, ha='left',va='top')
-            # self.ciflistax.set_facecolor((0.9, 0.9, 0.9))
-            # self.ciflistax.set_xticklabels([])
-            # self.ciflistax.set_yticklabels([])
+            self.ciflistax.remove()
+            del self.ciflistax
+            self.ciflistax = plt.axes([0.001, 0.001, 0.2, 0.7])
+            self.ciflistax.text(0.01, 0.99, self.ciflisttext, ha='left',va='top')
+            self.ciflistax.set_facecolor((0.9, 0.9, 0.9))
+            self.ciflistax.set_xticklabels([])
+            self.ciflistax.set_yticklabels([])
 
             self.ax.legend(frameon=True)
             self.ax.set_xlim(xlim)
@@ -389,7 +409,7 @@ class XRD_Peak_search_window:
             self.update_plot()
 
         def width_slider_changed(val):
-            self.width_list = np.arange(self.width_slider_min.val, 50, 0.1)
+            self.width_list = np.arange(self.width_slider.val, 50, 0.1)
             self.update_peaks()
             self.update_plot()
 
@@ -467,10 +487,10 @@ class XRD_Peak_search_window:
                     netoutfile.write(str(channel) + ' ' + format(self.net_spectrum[c], '.2f') +'\n')
             
             options = {
-                'width': self.width_slider_min.val,
-                'smoothing': self.slider_smoothing.val,
+                'width': self.width_slider.val,
+                'smoothing': self.smoothing_slider.val,
                 'background_height' : self.bgheight_slider.val,
-                'snip' : self.m_slider.val}
+                'snip' : self.snip_slider.val}
             with open(outputfile+'.yaml', 'w') as yamlfile: yaml.dump(options, yamlfile)
 
             showinfo(title='Info', message='Saved!')
@@ -524,7 +544,7 @@ class XRD_Peak_search_window:
             self.update_plot()
 
         def smoothing_changed(val):
-            self.smoothing_std = self.slider_smoothing.val
+            self.smoothing_std = self.smoothing_slider.val
             self.set_background()
             self.update_peaks()
             self.update_plot()
@@ -565,9 +585,9 @@ class XRD_Peak_search_window:
             with open(yamlfilename) as yamlfile: options = yaml.full_load(yamlfile)
             
             self.bgheight_slider.set_val(options['background_height'])
-            self.width_slider_min.set_val(options['width'])
-            self.slider_smoothing.set_val(options['smoothing'])
-            self.m_slider.set_val(options['snip'])
+            self.width_slider.set_val(options['width'])
+            self.smoothing_slider.set_val(options['smoothing'])
+            self.snip_slider.set_val(options['snip'])
             self.update_plot()
 
         def load_cif_db(loadcifevent):
@@ -584,7 +604,7 @@ class XRD_Peak_search_window:
             self.cifdescriptiontext = 'No .cif file loaded.'
             self.cif_files = []
             self.current_cif_index = 0
-            # self.ciflisttext = '-'
+            self.ciflisttext = '-'
             self.textbox.set_val('')
 
             self.update_plot()
@@ -593,10 +613,11 @@ class XRD_Peak_search_window:
             self.ax.set_xlim(self.x_default_lims)
             self.ax.set_ylim(-50, 1050)
             self.update_plot()
+        
         # onchange
-        self.width_slider_min.on_changed(width_slider_changed)
-        self.slider_smoothing.on_changed(smoothing_changed)
-        self.m_slider.on_changed(update_background)
+        self.width_slider.on_changed(width_slider_changed)
+        self.smoothing_slider.on_changed(smoothing_changed)
+        self.snip_slider.on_changed(update_background)
         self.bgheight_slider.on_changed(update_background)
         self.deltatheta_slider.on_changed(deltatheta_slider_changed)
 
@@ -609,6 +630,38 @@ class XRD_Peak_search_window:
         self.loadconfigbutton.on_clicked(load_config)
         self.loadcifbutton.on_clicked(load_cif_db)
         self.clearcifbutton.on_clicked(clear_cif_db)
+        
+        def smoothing_add(addevent): 
+            if self.smoothing_slider.val < self.smoothing_slider.valmax:self.smoothing_slider.set_val(self.smoothing_slider.val + self.smoothing_slider.valstep)
+        def smoothing_sub(subevent): 
+            if self.smoothing_slider.val > self.smoothing_slider.valmin:self.smoothing_slider.set_val(self.smoothing_slider.val - self.smoothing_slider.valstep)
+        def bheight_add(addevent): 
+            if self.bgheight_slider.val < self.bgheight_slider.valmax:self.bgheight_slider.set_val(self.bgheight_slider.val + self.bgheight_slider.valstep)
+        def bheight_sub(subevent): 
+            if self.bgheight_slider.val > self.bgheight_slider.valmin:self.bgheight_slider.set_val(self.bgheight_slider.val - self.bgheight_slider.valstep)
+        def deltatheta_add(addevent): 
+            if self.deltatheta_slider.val < self.deltatheta_slider.valmax:self.deltatheta_slider.set_val(self.deltatheta_slider.val + self.deltatheta_slider.valstep)
+        def deltatheta_sub(subevent): 
+            if self.deltatheta_slider.val > self.deltatheta_slider.valmin:self.deltatheta_slider.set_val(self.deltatheta_slider.val - self.deltatheta_slider.valstep)
+        def snip_add(addevent): 
+            if self.snip_slider.val < self.snip_slider.valmax:self.snip_slider.set_val(self.snip_slider.val + self.snip_slider.valstep)
+        def snip_sub(subevent): 
+            if self.snip_slider.val > self.snip_slider.valmin:self.snip_slider.set_val(self.snip_slider.val - self.snip_slider.valstep)
+        def width_add(addevent): 
+            if self.width_slider.val < self.width_slider.valmax:self.width_slider.set_val(self.width_slider.val + self.width_slider.valstep)
+        def width_sub(subevent): 
+            if self.width_slider.val > self.width_slider.valmin:self.width_slider.set_val(self.width_slider.val - self.width_slider.valstep)
+
+        self.smoothing_slider_min_addbutton.on_clicked(smoothing_add)
+        self.smoothing_slider_min_subbutton.on_clicked(smoothing_sub)
+        self.bheight_slider_min_addbutton.on_clicked(bheight_add)
+        self.bheight_slider_min_subbutton.on_clicked(bheight_sub)
+        self.deltatheta_slider_min_addbutton.on_clicked(deltatheta_add)
+        self.deltatheta_slider_min_subbutton.on_clicked(deltatheta_sub)
+        self.snip_slider_min_addbutton.on_clicked(snip_add)
+        self.snip_slider_min_subbutton.on_clicked(snip_sub)
+        self.width_slider_min_addbutton.on_clicked(width_add)
+        self.width_slider_min_subbutton.on_clicked(width_sub)
 
         def submit(submittext):
             self.current_cif_index = 0
