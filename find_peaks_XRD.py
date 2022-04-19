@@ -154,9 +154,10 @@ class XRD_Peak_search_window:
             lines = f.readlines()
 
         channels, spectrum = [],[]
-        for line in lines:
+        for line in lines: 
+            line = line.replace('\n', '')
             ch, intensity = line.split(' ')
-            spectrum += [int(intensity)]
+            spectrum += [float(intensity)]
             channels += [float(ch)]
 
         self.spectrum_filename = filename
@@ -687,8 +688,8 @@ class XRD_Peak_search_window:
                     
                     filelist = glob('./phases/*'+elements[0]+'*')
                     # print('\n\nfilelist iniziale!!!!!', len(filelist),'\n',filelist)
-                    filelist_ = filelist.copy()
                     for element in elements:
+                        filelist_ = filelist.copy()
                         for f in filelist_:
                             if not (element in path.basename(f)): filelist.remove(f); print('file removed because', element, 'not in',  path.basename(f), len (filelist))
                             
