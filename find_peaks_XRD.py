@@ -156,7 +156,7 @@ class XRD_Peak_search_window:
         channels, spectrum = [],[]
         for line in lines: 
             line = line.replace('\n', '')
-            ch, intensity = line.split(' ')
+            ch, intensity = line.split()
             spectrum += [float(intensity)]
             channels += [float(ch)]
 
@@ -189,7 +189,7 @@ class XRD_Peak_search_window:
 
     def open_new_file(self, initialdir='./data/'):
         Tk().withdraw()
-        filename = askopenfilename(filetypes=(('dat files', '*.dat'),('All files', '*.*')), initialdir=initialdir)
+        filename = askopenfilename(filetypes=(('dat files', '*.dat'),('txt files', '*.txt'),('All files', '*.*')), initialdir=initialdir)
         return filename
 
     def init_widgets(self):
@@ -311,8 +311,8 @@ class XRD_Peak_search_window:
         self.channels, self.spectrum = [],[]
 
         for line in lines:
-            ch, intensity = line.split(' ')
-            self.spectrum += [int(intensity)]
+            ch, intensity = line.split()
+            self.spectrum += [float(intensity)]
             self.channels += [float(ch)]
 
         self.spectrum = self.normalize(np.array(self.spectrum))
@@ -428,7 +428,7 @@ class XRD_Peak_search_window:
 
         def open_file(event):
             Tk().withdraw()
-            filename = askopenfilename(filetypes=(('dat files', '*.dat'),('All files', '*.*')))
+            filename = askopenfilename(filetypes=(('dat files', '*.dat'),('txt files', '*.txt'),('All files', '*.*')))
             self.set_spectrum(filename)
             self.set_background()
             self.update_peaks()
